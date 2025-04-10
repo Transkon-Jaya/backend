@@ -7,7 +7,7 @@
 //     exit;
 // }
 
-echo shell_exec('sudo -u corcomm git pull');
+echo shell_exec('sudo -u corcomm git pull > webhook.log 2>&1');
 // file_put_contents('webhook.log', $output . "\n", FILE_APPEND);
 // echo $output;
 // echo "Webhook executed\n";
