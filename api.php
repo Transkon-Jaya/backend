@@ -40,7 +40,7 @@ switch ($request) {
         require './services/location.php';
         break;
     case 'webhook':
-        require './webhook/webhook.php';
+        require './webhook.php';
         break;
     default:
         http_response_code(404);
