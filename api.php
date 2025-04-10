@@ -42,9 +42,6 @@ switch ($request) {
     case 'webhook':
         require './webhook.php';
         break;
-    case 'whoami':
-        require './whoami.php';
-        break;
     default:
         http_response_code(404);
         echo json_encode([
