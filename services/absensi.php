@@ -60,19 +60,28 @@ if (!$username) {
 if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
     $stmt = $conn->prepare("
         INSERT INTO hr_absensi (
-            username, tanggal, foto, longitude, langitude, ip, jarak, lokasi, start, finish,
-            break, hour_worked, ph, normal_hours, ovt,
-            calculation_overtime_1x1_5, calculation_overtime_1x2, 
-            calculation_overtime_1x3, calculation_overtime_1x4, total
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            username, tanggal, foto, lokasi
+        ) VALUES (?, ?, ?, ?)
     ");
+    // $stmt = $conn->prepare("
+    //     INSERT INTO hr_absensi (
+    //         username, tanggal, foto, longitude, langitude, ip, jarak, lokasi, start, finish,
+    //         break, hour_worked, ph, normal_hours, ovt,
+    //         calculation_overtime_1x1_5, calculation_overtime_1x2, 
+    //         calculation_overtime_1x3, calculation_overtime_1x4, total
+    //     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    // ");
 
+    // $stmt->bind_param(
+    //     "ssssssssssssssssssss",
+    //     $username, $date, $uploadPath, $long, $lang, $ip, $jarak, $lokasi,
+    //     $start, $finish, $break, $hour_worked, $ph, $normal_hours,
+    //     $ovt, $calculation_overtime_1x1_5, $calculation_overtime_1x2,
+    //     $calculation_overtime_1x3, $calculation_overtime_1x4, $total
+    // );
     $stmt->bind_param(
-        "ssssssssssssssssssss",
-        $username, $date, $uploadPath, $long, $lang, $ip, $jarak, $lokasi,
-        $start, $finish, $break, $hour_worked, $ph, $normal_hours,
-        $ovt, $calculation_overtime_1x1_5, $calculation_overtime_1x2,
-        $calculation_overtime_1x3, $calculation_overtime_1x4, $total
+        "ssss",
+        $username, $date, $uploadPath, $lokasi
     );
     if ($stmt->execute()) {
         $response["status"] = "success";
