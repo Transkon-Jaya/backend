@@ -11,47 +11,29 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     exit();
 }
 
+$allowed_routes = [
+  'test'        => 'test.php',
+  'login'       => 'login.php',
+  'pengumuman'  => 'services/pengumuman.php',
+  'users'       => 'services/users.php',
+  'customer'    => 'services/customer.php',
+  'marketing'   => 'services/marketing.php',
+  'po-unit'     => 'services/po_unit.php',
+  'location'    => 'services/location.php',
+  'webhook-be'  => 'webhook-be.php',
+  'webhook-fe'  => 'webhook-fe.php',
+];
 
 $request = $_GET['request'] ?? '';
 
-switch ($request) {
-    case 'test':
-      require 'test.php';
-      break;
-    case 'login':
-      require 'login.php';
-      break;
-    case 'pengumuman':
-      require './services/pengumuman.php';
-      break;
-    case 'users':
-      require './services/users.php';
-      break;
-    case 'customer':
-        require './services/customer.php';
-        break;
-    case 'marketing':
-        require './services/marketing.php';
-        break;
-    case 'po-unit':
-        require './services/po_unit.php';
-        break;
-    case 'location':
-        require './services/location.php';
-        break;
-    case 'webhook-be':
-        require './webhook-be.php';
-        break;
-    case 'webhook-fe':
-      require './webhook-fe.php';
-      break;
-    default:
-        http_response_code(404);
-        echo json_encode([
-            "status" => 404, 
-            "error" => "Invalid API endpoint"
-        ]);
+if (isset($allowed_routes[$request])) {
+  require $allowed_routes[$request];
+} else {
+  http_response_code(404);
+  echo json_encode([
+      'status' => 404,
+      'error' => "Invalid API endpoint: $request"
+  ]);
 }
-
 ?>
 
