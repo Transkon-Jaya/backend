@@ -45,7 +45,10 @@ $hour_worked = $_POST["hour_worked"] ?? null;
 $ph = $_POST["ph"] ?? null;
 $normal_hours = $_POST["normal_hours"] ?? null;
 $ovt = $_POST["ovt"] ?? null;
-$calculation_overtime = $_POST["calculation_overtime"] ?? null;
+$calculation_overtime_1x1_5 = $_POST["calculation_overtime_1x1_5"] ?? null;
+$calculation_overtime_1x2 = $_POST["calculation_overtime_1x2"] ?? null;
+$calculation_overtime_1x3 = $_POST["calculation_overtime_1x3"] ?? null;
+$calculation_overtime_1x4 = $_POST["calculation_overtime_1x4"] ?? null;
 $total = $_POST["total"] ?? null;
 
 if (!$username) {
@@ -58,18 +61,19 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
     $stmt = $conn->prepare("
         INSERT INTO hr_absensi (
             username, tanggal, foto, longitude, langitude, ip, jarak, lokasi, start, finish,
-            break, hour_worked, ph, normal_hours, ovt, calculation_overtime_1x1_5, calculation_overtime_1x2, 
+            break, hour_worked, ph, normal_hours, ovt,
+            calculation_overtime_1x1_5, calculation_overtime_1x2, 
             calculation_overtime_1x3, calculation_overtime_1x4, total
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->bind_param(
-        "sssssssssssssssss",
+        "ssssssssssssssssssss",
         $username, $date, $uploadPath, $long, $lang, $ip, $jarak, $lokasi,
         $start, $finish, $break, $hour_worked, $ph, $normal_hours,
-        $ovt, $calculation_overtime, $total
+        $ovt, $calculation_overtime_1x1_5, $calculation_overtime_1x2,
+        $calculation_overtime_1x3, $calculation_overtime_1x4, $total
     );
-
     if ($stmt->execute()) {
         $response["status"] = "success";
         $response["message"] = "Attendance recorded successfully.";
