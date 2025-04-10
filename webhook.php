@@ -1,5 +1,5 @@
 <?php
-file_put_contents('webhook.log', date('Y-m-d H:i:s') . " - Webhook received\n", FILE_APPEND);
+// file_put_contents('webhook.log', date('Y-m-d H:i:s') . " - Webhook received\n", FILE_APPEND);
 
 // if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 //     http_response_code(403);
@@ -7,8 +7,8 @@ file_put_contents('webhook.log', date('Y-m-d H:i:s') . " - Webhook received\n", 
 //     exit;
 // }
 
-$output = shell_exec('cd /var/www/html/api && git reset --hard HEAD && git pull 2>&1');
-file_put_contents('webhook.log', $output . "\n", FILE_APPEND);
-echo $output;
+echo shell_exec('git reset --hard HEAD && git pull 2>&1');
+// file_put_contents('webhook.log', $output . "\n", FILE_APPEND);
+// echo $output;
 // echo "Webhook executed\n";
 ?>
