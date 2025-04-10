@@ -39,9 +39,12 @@ switch ($request) {
     case 'location':
         require './services/location.php';
         break;
-    case 'webhook':
-        require './webhook.php';
+    case 'webhook-be':
+        require './webhook-be.php';
         break;
+    case 'webhook-fe':
+      require './webhook-fe.php';
+      break;
     default:
         http_response_code(404);
         echo json_encode([
