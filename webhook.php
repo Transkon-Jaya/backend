@@ -7,7 +7,7 @@
 //     exit;
 // }
 
-echo shell_exec('sudo -u corcomm git pull > webhook.log');
+echo shell_exec('sudo -u corcomm git reset --hard HEAD && sudo -u corcomm git pull');
 // file_put_contents('webhook.log', $output . "\n", FILE_APPEND);
 // echo $output;
 // echo "Webhook executed\n";
