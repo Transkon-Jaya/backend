@@ -1,8 +1,11 @@
 <?php
-echo json_encode(["status" => 400, "error" => "reached login"]);
+
 require 'vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Dotenv\Dotenv;
+
+
+echo json_encode(["status" => 400, "error" => "reached login"]);
 
 require 'db.php';
 
