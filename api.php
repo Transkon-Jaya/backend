@@ -19,7 +19,7 @@ switch ($request) {
       require 'test.php';
       break;
     case 'login':
-      require './login.php';
+      require 'login.php';
       break;
     case 'pengumuman':
       require './services/pengumuman.php';
