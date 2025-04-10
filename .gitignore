@@ -3,6 +3,7 @@
 
 # Ignore environment files
 .env
+db.php
 
 # Ignore IDE/editor folders
 .vscode/
