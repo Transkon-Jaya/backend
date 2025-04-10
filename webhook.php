@@ -7,7 +7,7 @@
 //     exit;
 // }
 
-echo shell_exec('git reset --hard HEAD && git pull 2>&1');
+echo shell_exec('git reset --hard HEAD && git pull');
 // file_put_contents('webhook.log', $output . "\n", FILE_APPEND);
 // echo $output;
 // echo "Webhook executed\n";
