@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 $allowed_routes = [
   'test'        => 'test.php',
   'login'       => 'login.php',
+  'absensi'     => 'services/absensi.php',
   'pengumuman'  => 'services/pengumuman.php',
   'users'       => 'services/users.php',
   'customer'    => 'services/customer.php',
