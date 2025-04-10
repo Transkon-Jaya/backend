@@ -4,6 +4,7 @@
 # Ignore environment files
 .env
 db.php
+/uploads/
 
 # Ignore IDE/editor folders
 .vscode/
