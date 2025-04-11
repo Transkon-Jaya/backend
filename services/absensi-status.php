@@ -6,15 +6,16 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!isset($data['username'])) {
+        if (!isset($_GET['username'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "No Username!"]);
             break;
         }
-        $username = $conn->real_escape_string($data['username']);
-        $sql = "SELECT * FROM hr_absensi WHERE username = $username AND tanggal = CURDATE()";
+
+        $username = $conn->real_escape_string($_GET['username']);
+        $sql = "SELECT * FROM hr_absensi WHERE username = '$username' AND tanggal = CURDATE()";
         $result = $conn->query($sql);
+
         if (!$result) {
             http_response_code(500);
             echo json_encode(["status" => 500, "error" => $conn->error]);
@@ -25,6 +26,7 @@ switch ($method) {
         while ($row = $result->fetch_assoc()) {
             $status[] = $row;
         }
+
         echo json_encode($status);
         break;
 
@@ -36,4 +38,3 @@ switch ($method) {
 
 $conn->close();
 ?>
-
