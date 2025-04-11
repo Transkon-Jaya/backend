@@ -13,7 +13,7 @@ switch ($method) {
         }
 
         $username = $conn->real_escape_string($_GET['username']);
-        $sql = "SELECT * FROM hr_absensi WHERE username = '$username' AND tanggal = CURDATE()";
+        $sql = "SELECT username, tanggal, hour_in, hour_out FROM hr_absensi WHERE username = '$username' AND tanggal = CURDATE()";
         $result = $conn->query($sql);
 
         if (!$result) {
