@@ -15,6 +15,7 @@ $allowed_routes = [
   'test'        => 'test.php',
   'login'       => 'login.php',
   'absensi'     => 'services/absensi.php',
+  'absensi-status'=> 'services/absensi-status.php',
   'pengumuman'  => 'services/pengumuman.php',
   'users'       => 'services/users.php',
   'customer'    => 'services/customer.php',
