@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 header("Content-Type: application/json");
 
-$uploadDir = "../uploads/absensi/";
+$uploadDir = "/var/www/html/uploads/absensi/";
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
