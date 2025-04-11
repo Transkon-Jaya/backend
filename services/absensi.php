@@ -60,8 +60,8 @@ if (!$username) {
 if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
     $stmt = $conn->prepare("
         INSERT INTO hr_absensi (
-            username, tanggal, foto, lokasi
-        ) VALUES (?, ?, ?, ?)
+            username, tanggal, foto, lokasi, longitude, latitude, ip
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     ");
     // $stmt = $conn->prepare("
     //     INSERT INTO hr_absensi (
@@ -80,13 +80,13 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
     //     $calculation_overtime_1x3, $calculation_overtime_1x4, $total
     // );
     $stmt->bind_param(
-        "ssss",
-        $username, $date, $uploadPath, $lokasi
+        "sssssss",
+        $username, $date, $uploadPath, $lokasi, $long, $lang, $ip
     );
     if ($stmt->execute()) {
         $response["status"] = "success";
         $response["message"] = "Attendance recorded successfully.";
-        $response["foto"] = $uploadPath;
+        // $response["foto"] = $uploadPath;
     } else {
         $response["message"] = "Database error: " . $stmt->error;
     }
