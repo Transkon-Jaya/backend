@@ -23,6 +23,8 @@ if (!isset($_FILES["foto"]) || $_FILES["foto"]["error"] !== UPLOAD_ERR_OK) {
     echo json_encode($response);
     exit();
 }
+
+$username = $_POST["username"] ?? null;
 if (!$username) {
     $response["message"] = "Username is required.";
     echo json_encode($response);
@@ -33,7 +35,7 @@ if (!$username) {
 $file = $_FILES["foto"];
 $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
 
-$username = $_POST["username"] ?? null;
+
 $status = $_POST["status"] ?? null;
 $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
 $cleanStatus = preg_replace("/[^a-zA-Z0-9_-]/", "", $status);
