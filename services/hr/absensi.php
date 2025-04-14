@@ -89,7 +89,7 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
             WHERE id = ?
         ");
         $stmt->bind_param(
-            "ssssss",
+            "sssssss",
             $uploadPath, $lokasi, $long, $lang, $ip, $jarak, $id
         );
     }
