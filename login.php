@@ -63,7 +63,7 @@ if ($user) {
     }
 } else {
     http_response_code(401);
-    echo json_encode(["status" => 401, "error" => "User not found"]);
+    echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
 }
 
 $stmt->close();
