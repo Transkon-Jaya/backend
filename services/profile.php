@@ -12,8 +12,11 @@ switch ($method) {
             break;
         }
         $username = $conn->real_escape_string($_GET['username']);
-        $sql = "CALL user_profile_get($username)";
-        $result = $conn->query($sql);
+        $sql = "CALL user_profile_get(?)";
+        // $result = $conn->prepare($sql);
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
         if (!$result) {
             http_response_code(500);
             echo json_encode(["status" => 500, "error" => $conn->error]);
