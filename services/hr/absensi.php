@@ -69,12 +69,12 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
     if ($status === "IN"){
         $stmt = $conn->prepare("
             INSERT INTO hr_absensi (
-                username, tanggal, foto_in, lokasi_in, longitude_in, latitude_in, ip_in
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                username, tanggal, foto_in, lokasi_in, longitude_in, latitude_in, ip_in, jarak_in
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->bind_param(
-            "sssssss",
-            $username, $date, $uploadPath, $lokasi, $long, $lang, $ip
+            "ssssssss",
+            $username, $date, $uploadPath, $lokasi, $long, $lang, $ip, $jarak
         );
     }
     else{
@@ -85,11 +85,12 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
                 longitude_out = ?,
                 latitude_out = ?,
                 ip_out = ?
+                jarak_out = ?
             WHERE id = ?
         ");
         $stmt->bind_param(
             "ssssss",
-            $uploadPath, $lokasi, $long, $lang, $ip, $id
+            $uploadPath, $lokasi, $long, $lang, $ip, $jarak, $id
         );
     }
 
