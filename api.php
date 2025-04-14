@@ -22,6 +22,7 @@ $allowed_routes = [
   'customer'    => 'services/customer.php',
   'marketing'   => 'services/marketing.php',
   'po-unit'     => 'services/po_unit.php',
+  'profile'     => 'services/profile.php',
   'location'    => 'services/location.php',
   'webhook-be'  => 'webhook-be.php',
   'webhook-fe'  => 'webhook-fe.php',
