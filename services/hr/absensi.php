@@ -84,7 +84,7 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
                 lokasi_out = ?,
                 longitude_out = ?,
                 latitude_out = ?,
-                ip_out = ?
+                ip_out = ?,
                 jarak_out = ?
             WHERE id = ?
         ");
