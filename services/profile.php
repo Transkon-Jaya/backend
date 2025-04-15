@@ -10,6 +10,7 @@ if (!is_dir($uploadDir)) {
 }
 
 $message = "";
+$fileName = "";
 
 switch ($method) {
     case 'GET':
@@ -49,7 +50,6 @@ switch ($method) {
             $username = $data['username'];
             // File upload handling
             $isMoved = true;
-            $fileName = "";
 
             if (isset($_FILES['profilePicture'])) {
                 $profilePicture = $_FILES['profilePicture'];
@@ -115,7 +115,7 @@ switch ($method) {
             }
             
             // 3. Final response
-            echo json_encode(["status" => 200, "message" => $message]);
+            echo json_encode(["status" => 200, "message" => "Success", "foto" => $fileName]);
             break;
             
     default:
