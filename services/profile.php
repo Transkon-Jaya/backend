@@ -9,6 +9,8 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
+$message = "";
+
 switch ($method) {
     case 'GET':
         if (!isset($_GET['username'])) {
@@ -48,7 +50,7 @@ switch ($method) {
             // File upload handling
             $isMoved = true;
             $fileName = "";
-            $uploadPath = "";
+
             if (isset($_FILES['profilePicture'])) {
                 $profilePicture = $_FILES['profilePicture'];
                 
@@ -65,6 +67,7 @@ switch ($method) {
                 $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
                 $fileName = $cleanUsername . "_" . time() . "." . $ext;
                 $uploadPath = $uploadDir . $fileName;
+                $message = $uploadPath;
                 if (!move_uploaded_file($profilePicture['tmp_name'], $uploadPath)) {
                     http_response_code(500);
                     echo json_encode(["status" => 500, "error" => "File upload failed."]);
@@ -112,7 +115,7 @@ switch ($method) {
             }
             
             // 3. Final response
-            echo json_encode(["status" => 200, "message" => $uploadPath]);
+            echo json_encode(["status" => 200, "message" => $message]);
             break;
             
 
