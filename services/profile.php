@@ -82,7 +82,7 @@ switch ($method) {
         // If the file is uploaded, save the file path to the database
         $profilePicturePath = isset($uploadFile) ? $uploadFile : null;
     
-        if (isMoved) {
+        if ($isMoved) {
             $sql = "CALL user_profile_update(?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssssss", $username, $name, $department, $position, $fileName, $email, $phone);
