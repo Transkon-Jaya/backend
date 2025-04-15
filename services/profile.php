@@ -84,7 +84,7 @@ switch ($method) {
         if (!empty($data['profilePicturePath'])) {
             $sql = "CALL user_profile_update(?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssss", $username, $name, $email, $phone, $department, $position, $data['profilePicturePath']);
+            $stmt->bind_param("sssssss", $username, $name, $department, $position, $fileName, $email, $phone);
         } else {
             $sql = "CALL user_profile_update_no_photo(?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
