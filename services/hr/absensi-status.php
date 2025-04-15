@@ -13,7 +13,7 @@ switch ($method) {
         }
 
         $username = $conn->real_escape_string($_GET['username']);
-        $sql = "SELECT id, username, tanggal, REPLACE(foto_in, '/var/www/html', '') AS foto_in, REPLACE(foto_out, '/var/www/html', '') AS foto_out, hour_in, hour_out FROM hr_absensi WHERE username = '$username' ORDER BY id DESC LIMIT 1";
+        $sql = "SELECT id, username, tanggal, foto_in, foto_out, hour_in, hour_out FROM hr_absensi WHERE username = '$username' ORDER BY id DESC LIMIT 1";
         $result = $conn->query($sql);
         if (!$result) {
             http_response_code(500);

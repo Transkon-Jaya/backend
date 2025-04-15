@@ -74,7 +74,7 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
         ");
         $stmt->bind_param(
             "ssssssss",
-            $username, $date, $uploadPath, $lokasi, $long, $lang, $ip, $jarak
+            $username, $date, $uniqueName, $lokasi, $long, $lang, $ip, $jarak
         );
     }
     else{
@@ -91,7 +91,7 @@ if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
         ");
         $stmt->bind_param(
             "sssssss",
-            $uploadPath, $lokasi, $long, $lang, $ip, $jarak, $id
+            $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $id
         );
     }
 
