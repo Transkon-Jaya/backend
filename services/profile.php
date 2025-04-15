@@ -88,7 +88,7 @@ switch ($method) {
         } else {
             $sql = "CALL user_profile_update_no_photo(?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssssss", $username, $name, $email, $phone, $department, $position);
+            $stmt->bind_param("ssssss", $username, $name, $department, $position, $email, $phone);
         }
         $stmt->execute();
         $stmt->close();
