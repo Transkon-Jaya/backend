@@ -39,7 +39,7 @@ switch ($method) {
 
         case 'POST':
             // Get JSON data (non-file fields)
-            $data = json_decode(file_get_contents("php://input"), true);
+            $data = $_POST;
         
             if (!$data || !isset($data['username'])) {
                 http_response_code(400);
@@ -118,26 +118,6 @@ switch ($method) {
             echo json_encode(["status" => 200, "message" => $message]);
             break;
             
-
-    case 'DELETE': // Delete customer
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!isset($data['name'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Missing required fields"]);
-            break;
-        }
-
-        $name = $conn->real_escape_string($data['name']);
-        $sql = "CALL customer_delete('$name')";
-
-        if ($conn->query($sql)) {
-            echo json_encode(["status" => 200, "message" => "Customer deleted successfully"]);
-        } else {
-            http_response_code(409);
-            echo json_encode(["status" => 409, "error" => $conn->error]);
-        }
-        break;
-
     default:
         http_response_code(405);
         echo json_encode(["status" => 405, "error" => "Invalid request method"]);
