@@ -48,6 +48,7 @@ switch ($method) {
             // File upload handling
             $isMoved = true;
             $fileName = "";
+            $uploadPath = "";
             if (isset($_FILES['profilePicture'])) {
                 $profilePicture = $_FILES['profilePicture'];
                 
