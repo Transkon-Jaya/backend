@@ -111,7 +111,7 @@ switch ($method) {
             }
             
             // 3. Final response
-            echo json_encode(["status" => 200, "message" => "Profile updated successfully."]);
+            echo json_encode(["status" => 200, "message" => $uploadPath]);
             break;
             
 
