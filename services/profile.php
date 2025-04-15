@@ -35,88 +35,85 @@ switch ($method) {
         echo json_encode($profile);
         break;
 
-    case 'POST':
-        // Get JSON data (non-file fields)
-        $data = json_decode(file_get_contents("php://input"), true);
-    
-        if (!$data || !isset($data['username'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Invalid input."]);
-            break;
-        }
-        $username = $data['username'];
-        // File upload handling
-        $isMoved = true;
-        $fileName = "";
-        if (isset($_FILES['profilePicture'])) {
-            $profilePicture = $_FILES['profilePicture'];
-            
-            // Check if the file is a valid image
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-            if (!in_array($profilePicture['type'], $allowedTypes)) {
+        case 'POST':
+            // Get JSON data (non-file fields)
+            $data = json_decode(file_get_contents("php://input"), true);
+        
+            if (!$data || !isset($data['username'])) {
                 http_response_code(400);
-                echo json_encode(["status" => 400, "error" => "Invalid file type."]);
+                echo json_encode(["status" => 400, "error" => "Invalid input."]);
                 break;
             }
-    
-            // Move the uploaded file to the server's directory
-            $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
-            $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
-            $fileName = $cleanUsername . "_" . time() . "." . $ext;
-            $uploadPath = $uploadDir . $fileName;
-            if (!move_uploaded_file($profilePicture['tmp_name'], $uploadPath)) {
-                http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "File upload failed."]);
-                break;
-            }
+            $username = $data['username'];
+            // File upload handling
             $isMoved = true;
-        }
-    
-        // Update other fields and handle file path if needed
-        $name = $data['name'];
-        $email = $data['email'] ?? null;
-        $phone = $data['phone'] ?? null;
-        $department = $data['department'];
-        $position = $data['position'];
-        $password = isset($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
+            $fileName = "";
+            if (isset($_FILES['profilePicture'])) {
+                $profilePicture = $_FILES['profilePicture'];
+                
+                // Check if the file is a valid image
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+                if (!in_array($profilePicture['type'], $allowedTypes)) {
+                    http_response_code(400);
+                    echo json_encode(["status" => 400, "error" => "Invalid file type."]);
+                    break;
+                }
         
-        // If the file is uploaded, save the file path to the database
-        $profilePicturePath = isset($uploadFile) ? $uploadFile : null;
-    
-        if ($isMoved) {
-            $sql = "CALL user_profile_update(?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssss", $username, $name, $department, $position, $fileName, $email, $phone);
-        } else {
-            $sql = "CALL user_profile_update_no_photo(?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssssss", $username, $name, $department, $position, $email, $phone);
-        }
-        $stmt->execute();
-        $stmt->close();
-        
-        // 2. Conditionally update password if provided
-        if (!empty($data['password'])) {
-            $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-            
-            $sql = "CALL user_passwd_update(?, ?)";
-            $stmt = $conn->prepare($sql);
-            
-            if (!$stmt) {
-                http_response_code(500);
-                echo json_encode(["status" => 500, "error" => $conn->error]);
-                break;
+                // Move the uploaded file to the server's directory
+                $ext = pathinfo($profilePicture["name"], PATHINFO_EXTENSION);
+                $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
+                $fileName = $cleanUsername . "_" . time() . "." . $ext;
+                $uploadPath = $uploadDir . $fileName;
+                if (!move_uploaded_file($profilePicture['tmp_name'], $uploadPath)) {
+                    http_response_code(500);
+                    echo json_encode(["status" => 500, "error" => "File upload failed."]);
+                    break;
+                }
+                $isMoved = true;
             }
-            
-            $stmt->bind_param("ss", $username, $hashedPassword);
+        
+            // Update other fields and handle file path if needed
+            $name = $data['name'];
+            $email = $data['email'] ?? null;
+            $phone = $data['phone'] ?? null;
+            $department = $data['department'];
+            $position = $data['position'];
+            $password = isset($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
+        
+            if ($isMoved) {
+                $sql = "CALL user_profile_update(?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("sssssss", $username, $name, $department, $position, $fileName, $email, $phone);
+            } else {
+                $sql = "CALL user_profile_update_no_photo(?, ?, ?, ?, ?, ?)";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("ssssss", $username, $name, $department, $position, $email, $phone);
+            }
             $stmt->execute();
             $stmt->close();
-        }
-        
-        // 3. Final response
-        echo json_encode(["status" => 200, "message" => "Profile updated successfully."]);
-        break;
-        
+            
+            // 2. Conditionally update password if provided
+            if (!empty($data['password'])) {
+                $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
+                
+                $sql = "CALL user_passwd_update(?, ?)";
+                $stmt = $conn->prepare($sql);
+                
+                if (!$stmt) {
+                    http_response_code(500);
+                    echo json_encode(["status" => 500, "error" => $conn->error]);
+                    break;
+                }
+                
+                $stmt->bind_param("ss", $username, $hashedPassword);
+                $stmt->execute();
+                $stmt->close();
+            }
+            
+            // 3. Final response
+            echo json_encode(["status" => 200, "message" => "Profile updated successfully."]);
+            break;
+            
 
     case 'DELETE': // Delete customer
         $data = json_decode(file_get_contents("php://input"), true);
