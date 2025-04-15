@@ -13,7 +13,7 @@ switch ($method) {
         }
         $username = $conn->real_escape_string($_GET['username']);
         $sql = "CALL user_profile_get(?)";
-        // $result = $conn->prepare($sql);
+        $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
