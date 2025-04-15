@@ -47,6 +47,7 @@ switch ($method) {
         $username = $data['username'];
         // File upload handling
         $isMoved = true;
+        $fileName = "";
         if (isset($_FILES['profilePicture'])) {
             $profilePicture = $_FILES['profilePicture'];
             
