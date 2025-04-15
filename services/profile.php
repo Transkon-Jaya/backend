@@ -46,6 +46,7 @@ switch ($method) {
         }
         $username = $data['username'];
         // File upload handling
+        $isMoved = true;
         if (isset($_FILES['profilePicture'])) {
             $profilePicture = $_FILES['profilePicture'];
             
@@ -62,12 +63,12 @@ switch ($method) {
             $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
             $fileName = $cleanUsername . "_" . time() . "." . $ext;
             $uploadPath = $uploadDir . $fileName;
-    
             if (!move_uploaded_file($profilePicture['tmp_name'], $uploadPath)) {
                 http_response_code(500);
                 echo json_encode(["status" => 500, "error" => "File upload failed."]);
                 break;
             }
+            $isMoved = true;
         }
     
         // Update other fields and handle file path if needed
@@ -81,7 +82,7 @@ switch ($method) {
         // If the file is uploaded, save the file path to the database
         $profilePicturePath = isset($uploadFile) ? $uploadFile : null;
     
-        if (!empty($data['profilePicturePath'])) {
+        if (isMoved) {
             $sql = "CALL user_profile_update(?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssssss", $username, $name, $department, $position, $fileName, $email, $phone);
