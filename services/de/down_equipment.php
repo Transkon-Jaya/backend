@@ -79,9 +79,9 @@ switch ($method) {
     case 'PUT':
         $data = json_decode(file_get_contents("php://input"), true);
         
-        if (!isset($data['id'])) {
+        if (!isset($data['tk_no'])) {
             http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Missing required 'id'"]);
+            echo json_encode(["status" => 400, "error" => "Missing required 'tk_no'"]);
             break;
         }
     
