@@ -85,8 +85,8 @@ switch ($method) {
             break;
         }
     
-        $id = $conn->real_escape_string($data['id']);
-        unset($data['id']); // Remove ID from update fields
+        $id = $conn->real_escape_string($data['tk_no']);
+        unset($data['tk_no']); // Remove ID from update fields
     
         if (empty($data)) {
             http_response_code(400);
@@ -111,7 +111,7 @@ switch ($method) {
             }
         }
     
-        $updateQuery = "UPDATE down_equipment SET " . implode(", ", $updateFields) . " WHERE id = ?";
+        $updateQuery = "UPDATE down_equipment SET " . implode(", ", $updateFields) . " WHERE tk_no = ?";
         $params[] = $id;
         $types .= "s"; // Assuming ID is a string, change to "i" if it's an integer
     
