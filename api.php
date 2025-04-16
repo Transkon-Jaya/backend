@@ -16,6 +16,7 @@ $allowed_routes = [
   'login'       => 'login.php',
   'absensi'     => 'services/hr/absensi.php',
   'absensi-status'=> 'services/hr/absensi-status.php',
+  'down_equipment' => 'services/de/down_equipment.php',
   'hr-lokasi'   => 'services/hr/lokasi.php',
   'pengumuman'  => 'services/pengumuman.php',
   'users'       => 'services/users.php',
