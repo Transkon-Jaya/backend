@@ -49,7 +49,6 @@ if ($user) {
         $issued_at = time();
         $expiration_time = $issued_at + (60 * 60 * 24); // Token expires in 1 day
         $payload = [
-            "user_id" => $user['id'],
             "username" => $username,
             "user_level" => $user['user_level'],
             "exp" => $expiration_time
