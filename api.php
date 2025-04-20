@@ -1,45 +1,62 @@
 <?php
-//header("Access-Control-Allow-Origin: *"); 
-//header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-//header("Access-Control-Allow-Headers: Content-Type, Authorization");
-//header("Access-Control-Allow-Credentials: true");
-//header("Content-Type: application/json");
+//header(...); // (optional) add CORS headers here
 
-// Handle preflight request (OPTIONS method)
 if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     http_response_code(200);
     exit();
 }
 
 $allowed_routes = [
-  'test'        => 'test.php',
-  'login'       => 'login.php',
-  'absensi'     => 'services/hr/absensi.php',
-  'absensi-status'=> 'services/hr/absensi-status.php',
-  'absensi-latest' => 'services/hr/absensi-latest.php',
-  'down_equipment' => 'services/de/down_equipment.php',
-  'hr-lokasi'   => 'services/hr/lokasi.php',
-  'pengumuman'  => 'services/pengumuman.php',
-  'users'       => 'services/users.php',
-  'customer'    => 'services/customer.php',
-  'marketing'   => 'services/marketing.php',
-  'po-unit'     => 'services/po_unit.php',
-  'profile'     => 'services/profile.php',
-  'location'    => 'services/location.php',
-  'webhook-be'  => 'webhook-be.php',
-  'webhook-fe'  => 'webhook-fe.php',
+    'test'           => 'test.php',
+    'login'          => 'login.php',
+    'absensi'        => 'services/hr/absensi.php',
+    'absensi-status' => 'services/hr/absensi-status.php',
+    'absensi-latest' => 'services/hr/absensi-latest.php',
+    'down_equipment' => 'services/de/down_equipment.php',
+    'hr-lokasi'      => 'services/hr/lokasi.php',
+    'pengumuman'     => 'services/pengumuman.php',
+    'users'          => 'services/users.php',
+    'customer'       => 'services/customer.php',
+    'marketing'      => 'services/marketing.php',
+    'po-unit'        => 'services/po_unit.php',
+    'profile'        => 'services/profile.php',
+    'location'       => 'services/location.php',
+    'webhook-be'     => 'webhook-be.php',
+    'webhook-fe'     => 'webhook-fe.php',
+];
+
+// NEW: scalable route pattern matching
+$allowed_startswith = [
+    'dropdowns' => 'services/dropdowns.php',
+    // You can add more here later, like:
+    // 'uploads' => 'services/uploads.php',
+    // 'reports' => 'services/reports.php',
 ];
 
 $request = $_GET['request'] ?? '';
 
+// Direct match
 if (isset($allowed_routes[$request])) {
-  require $allowed_routes[$request];
-} else {
-  http_response_code(404);
-  echo json_encode([
-      'status' => 404,
-      'error' => "Invalid API endpoint: $request"
-  ]);
-}
-?>
+    require $allowed_routes[$request];
 
+// Regex match for scalable prefixes
+} elseif (preg_match('#^([a-zA-Z0-9_-]+)(/.*)?$#', $request, $matches)) {
+    $prefix = $matches[1]; // 'dropdowns', 'uploads', etc.
+
+    if (isset($allowed_startswith[$prefix])) {
+        require $allowed_startswith[$prefix];
+    } else {
+        http_response_code(404);
+        echo json_encode([
+            'status' => 404,
+            'error' => "No handler found for prefix: $prefix"
+        ]);
+    }
+
+} else {
+    http_response_code(404);
+    echo json_encode([
+        'status' => 404,
+        'error' => "Invalid API endpoint: $request"
+    ]);
+}
