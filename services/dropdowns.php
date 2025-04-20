@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 require_once __DIR__ . '/../db.php';
 
 $allowed_routes = [
+    'dropdowns/customer'    => 'SELECT DISTINCT name FROM customer',
     'dropdowns/tk_no'        => 'SELECT DISTINCT tk_no FROM down_equipment',
     'dropdowns/vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
 ];
