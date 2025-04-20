@@ -22,7 +22,7 @@ if (isset($allowed_routes[$request])) {
 
     if ($result) {
         $data = [];
-        while ($row = $result->fetch_row()) {
+        while ($row = $result->fetch_assoc()) {
             $data[] = $row;
         }
 
