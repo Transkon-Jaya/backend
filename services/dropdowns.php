@@ -6,7 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 }
 
 // Require DB connection
-require_once __DIR__ . '/../db.php'; // adjust if needed
+require_once __DIR__ . '/../db.php';
 
 $allowed_routes = [
     'dropdowns/tk_no'        => 'SELECT DISTINCT tk_no FROM down_equipment',
@@ -23,7 +23,7 @@ if (isset($allowed_routes[$request])) {
     if ($result) {
         $data = [];
         while ($row = $result->fetch_row()) {
-            $data[] = $row[0]; // just the first column
+            $data[] = $row;
         }
 
         echo json_encode($data);
