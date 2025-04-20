@@ -12,8 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 }
 
 $allowed_routes = [
-  'dropdown/tk_no'        => 'SELECT DISTINCT tk_no FROM down_equipment',
-  'dropdown/vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
+  'dropdowns/tk_no'        => 'SELECT DISTINCT tk_no FROM down_equipment',
+  'dropdowns/vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
 ];
 
 $request = $_GET['request'] ?? '';
