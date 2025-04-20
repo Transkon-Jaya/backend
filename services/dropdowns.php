@@ -26,10 +26,7 @@ if (isset($allowed_routes[$request])) {
             $data[] = $row[0]; // just the first column
         }
 
-        echo json_encode([
-            'status' => 200,
-            'data' => $data
-        ]);
+        echo json_encode($data);
     } else {
         http_response_code(500);
         echo json_encode([
