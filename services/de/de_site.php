@@ -16,7 +16,7 @@ switch ($method) {
 
         // Add WHERE clause if username is provided
         if ($username !== null) {
-            $sql .= " WHERE de.username = '$username'";
+            $sql .= " WHERE ds.username = '$username'";
         }
 
         $result = $conn->query($sql);
