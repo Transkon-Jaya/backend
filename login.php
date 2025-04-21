@@ -61,7 +61,6 @@ if ($user) {
         $issued_at = time();
         $expiration_time = $issued_at + (60 * 60 * 24); // Token expires in 1 day
         $payload = [
-            "hey" => "hey",
             "username" => $username,
             "user_level" => $user_level,
             "permissions" => $permissions,
@@ -69,7 +68,7 @@ if ($user) {
         ];
         http_response_code(200);
         $jwt = JWT::encode($payload, $secret_key, 'HS256');
-        echo json_encode(["status" => 200, "token" => $jwt, "user_level" => $user['user_level']]);
+        echo json_encode(["status" => 200, "token" => $jwt, "user_level" => $user_level, "permissions" => $permissions]);
     } else {
         http_response_code(401);
         echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
