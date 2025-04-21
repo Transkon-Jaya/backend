@@ -29,6 +29,7 @@ $allowed_routes = [
 // NEW: scalable route pattern matching
 $allowed_startswith = [
     'dropdowns' => 'services/dropdowns.php',
+    'autoget'   => 'services/autoget.php',
     // You can add more here later, like:
     // 'uploads' => 'services/uploads.php',
     // 'reports' => 'services/reports.php',
