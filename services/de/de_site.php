@@ -9,7 +9,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $sql = "SELECT * FROM de_site";
+        $sql = "SELECT ds.*, de.vehicle_type FROM de_site ds INNER JOIN down_equipment de ON ds.tk_no = de.tk_no ";
         $result = $conn->query($sql);
 
         if (!$result) {
