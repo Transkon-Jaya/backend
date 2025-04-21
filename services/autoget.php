@@ -29,11 +29,11 @@ if (isset($allowed_routes[$request])) {
     $query = $route['query'];
 
     // Check if required number of params is provided
-    if (count($params) < $route['params']) {
+    if (count($params) != $route['params']) {
         http_response_code(400);
         echo json_encode([
             'status' => 400,
-            'error' => "Missing query parameters for '$request'"
+            'error' => "Wrong parameters for '$request'"
         ]);
         exit();
     }
@@ -66,6 +66,6 @@ if (isset($allowed_routes[$request])) {
     http_response_code(404);
     echo json_encode([
         'status' => 404,
-        'error' => "Invalid dropdown request: $request"
+        'error' => "Invalid autoget request: $request"
     ]);
 }
