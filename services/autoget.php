@@ -14,6 +14,10 @@ $allowed_routes = [
         'query' => 'SELECT vehicle_type FROM down_equipment WHERE tk_no = ?',
         'params' => 1
     ],
+    'autoget/double' => [
+        'query' => 'SELECT vehicle_type FROM down_equipment WHERE tk_no = ? AND hub = ?',
+        'params' => 2
+    ],
 ];
 
 // Get the requested route
