@@ -22,7 +22,21 @@ $allowed_routes = [
 
 // Get the requested route
 $request = $_GET['request'] ?? '';
-$params = $_GET['params'] ?? [];
+
+// Fallback: If params[] is not provided, collect numeric keys like 0=, 1=, etc.
+if (isset($_GET['params'])) {
+    $params = $_GET['params'];
+    if (!is_array($params)) $params = [$params];
+} else {
+    $params = [];
+    foreach ($_GET as $key => $val) {
+        if (is_numeric($key)) {
+            $params[(int)$key] = $val;
+        }
+    }
+    ksort($params); // Ensure proper order: 0,1,2...
+    $params = array_values($params); // Reindex
+}
 
 if (!is_array($params)) {
     $params = [$params]; // Normalize to array
