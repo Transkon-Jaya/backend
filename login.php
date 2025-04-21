@@ -45,12 +45,25 @@ if ($result->num_rows > 0) {
 $stmt->close();
 
 if ($user) {
+    $user_level = $user["user_level"];
+    $sql = "CALL user_get_permissions(?)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $permissions = [];
+    while ($row = $result->fetch_assoc()) {
+        $permissions[] = $row['permission'];
+    }
+    $stmt->close();
+
     if (password_verify($password, $user['passwd'])) {
         $issued_at = time();
         $expiration_time = $issued_at + (60 * 60 * 24); // Token expires in 1 day
         $payload = [
             "username" => $username,
-            "user_level" => $user['user_level'],
+            "user_level" => $user_level,
+            "permissions" => $permissions,
             "exp" => $expiration_time
         ];
         http_response_code(200);
