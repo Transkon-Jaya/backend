@@ -4,12 +4,21 @@ require 'db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-//$logfile = '/var/www/html/debug.log';
-//$logmsg = 'datetime : ' . date("Y-m-d H:i:s") . " : ";
-
 switch ($method) {
     case 'GET':
-        $sql = "SELECT ds.*, de.vehicle_type FROM de_site ds INNER JOIN down_equipment de ON ds.tk_no = de.tk_no ";
+        // Check if username is passed as a GET parameter
+        $username = isset($_GET['username']) ? $conn->real_escape_string($_GET['username']) : null;
+
+        // Base SQL query
+        $sql = "SELECT ds.*, de.vehicle_type 
+                FROM de_site ds 
+                INNER JOIN down_equipment de ON ds.tk_no = de.tk_no";
+
+        // Add WHERE clause if username is provided
+        if ($username !== null) {
+            $sql .= " WHERE ds.username = '$username'";
+        }
+
         $result = $conn->query($sql);
 
         if (!$result) {
@@ -24,14 +33,12 @@ switch ($method) {
         }
         echo json_encode($outputs);
         break;
- 
+
     default:
         http_response_code(405);
         echo json_encode(["status" => 405, "error" => "Invalid request method"]);
         break;
 }
 
-//$logmsg .= $conn->errno . " => " . $conn->error . "\n"; // Fixed concatenation
-//file_put_contents($logfile, $logmsg, FILE_APPEND);
 $conn->close();
 ?>
