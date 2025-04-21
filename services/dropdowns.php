@@ -29,7 +29,7 @@ if (isset($allowed_routes[$request])) {
         //     $data[] = $row;
         // }
         while ($row = $result->fetch_row()) { // fetch_row gives indexed array instead of associative
-            $data[] = $row;
+            $data[] = $row[0];
         }
 
         echo json_encode($data);
