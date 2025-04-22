@@ -18,6 +18,7 @@ switch ($method) {
         if ($username !== null) {
             $sql .= " WHERE ds.username = '$username'";
         }
+        $sql .= " ORDER BY ds.createdAt DESC";
 
         $result = $conn->query($sql);
 
