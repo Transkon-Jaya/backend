@@ -36,81 +36,112 @@ switch ($method) {
         echo json_encode($outputs);
         break;
 
-    case 'POST':
-        // Get JSON input
-        $input = json_decode(file_get_contents('php://input'), true);
-
-        // Validate required fields
-        $required = ['tk_no', 'username'];
-        foreach ($required as $field) {
-            if (empty($input[$field])) {
-                http_response_code(400);
-                echo json_encode(["status" => 400, "error" => "$field is required"]);
-                exit;
+    case 'POST': // Insert
+        $data = json_decode(file_get_contents("php://input"), true);
+        if (!$data) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Invalid JSON data"]);
+            break;
+        }
+    
+        // Extract columns and prepare placeholders
+        $columns = array_keys($data);
+        $placeholders = [];
+        $values = [];
+        $types = "";
+    
+        foreach ($data as $column => $value) {
+            if ($value === null || $value === "") {
+                $placeholders[] = "NULL"; // Use NULL in SQL directly
+            } else {
+                $placeholders[] = "?";
+                $values[] = $value;
+                $types .= "s"; // Adjust based on the actual data type if needed
             }
         }
-
-        // Escape values
-        $tk_no = $conn->real_escape_string($input['tk_no']);
-        $username = $conn->real_escape_string($input['username']);
-
-        // Check for optional fields, set to NULL if not present
-        $comment = isset($input['comment']) ? $conn->real_escape_string($input['comment']) : null;
-        $down_since = isset($input['down_since']) ? $conn->real_escape_string($input['down_since']) : null;
-        $estimated_return = isset($input['estimated_return']) ? $conn->real_escape_string($input['estimated_return']) : null;
-        $spare_exists = isset($input['spare_exists']) ? $conn->real_escape_string($input['spare_exists']) : null;
-
-        $sql = "INSERT INTO de_site (tk_no, username, comment, down_since, estimated_return, spare_exists)
-                VALUES ('$tk_no', '$username', " . ($comment ? "'$comment'" : 'NULL') . ", " . ($down_since ? "'$down_since'" : 'NULL') . ", " . ($estimated_return ? "'$estimated_return'" : 'NULL') . ($spare_exists ? "'$spare_exists'" : 'NULL') . ")";
-
-        if ($conn->query($sql)) {
-            echo json_encode(["status" => 200, "message" => "Data inserted successfully"]);
-        } else {
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $conn->error]);
-        }
-
-        break;
-
-    case 'PUT':
-        $input = json_decode(file_get_contents('php://input'), true);
-
-        // Validate required fields
-        $required = ['tk_no', 'username'];
-        foreach ($required as $field) {
-            if (empty($input[$field])) {
-                http_response_code(400);
-                echo json_encode(["status" => 400, "error" => "$field is required"]);
-                exit;
-            }
-        }
-
-        $tk_no = $conn->real_escape_string($input['tk_no']);
-        $username = $conn->real_escape_string($input['username']);
-
-        // Check for optional fields, set to NULL if not present
-        $comment = isset($input['comment']) ? $conn->real_escape_string($input['comment']) : null;
-        $down_since = isset($input['down_since']) ? $conn->real_escape_string($input['down_since']) : null;
-        $estimated_return = isset($input['estimated_return']) ? $conn->real_escape_string($input['estimated_return']) : null;
-        $spare_exists = isset($input['spare_exists']) ? $conn->real_escape_string($input['spare_exists']) : null;
+    
+        // Build SQL dynamically
+        $sql = "INSERT INTO de_site (" . implode(", ", $columns) . ") VALUES (" . implode(", ", $placeholders) . ")";
         
-        // Prepare SQL with conditional null values
-        $sql = "UPDATE de_site 
-                SET 
-                    comment = " . ($comment ? "'$comment'" : 'NULL') . ",
-                    down_since = " . ($down_since ? "'$down_since'" : 'NULL') . ",
-                    estimated_return = " . ($estimated_return ? "'$estimated_return'" : 'NULL') . "
-                    spare_exists = " . ($spare_exists ? "'$spare_exists'" : 'NULL') . "
-                WHERE tk_no = '$tk_no' AND username = '$username'";
-
-        if ($conn->query($sql)) {
-            echo json_encode(["status" => 200, "message" => "Data updated successfully"]);
-        } else {
+        // Prepare statement
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $conn->error]);
+            echo json_encode(["status" => 500, "error" => "SQL Error: " . $conn->error]);
+            break;
         }
+    
+        // Bind parameters dynamically if there are values to bind
+        if (!empty($values)) {
+            $stmt->bind_param($types, ...$values);
+        }
+    
+        if ($stmt->execute()) {
+            echo json_encode(["status" => 200, "message" => "DE data added successfully"]);
+        } else {
+            http_response_code(409);
+            echo json_encode(["status" => 409, "error" => $stmt->error]);
+        }
+        
+        $stmt->close();
         break;
-
+        
+    
+    case 'PUT':
+        $data = json_decode(file_get_contents("php://input"), true);
+        
+        if (!isset($data['tk_no'])) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Missing required 'tk_no'"]);
+            break;
+        }
+    
+        $id = $conn->real_escape_string($data['tk_no']);
+        unset($data['tk_no']); // Remove ID from update fields
+    
+        if (empty($data)) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "No fields provided for update"]);
+            break;
+        }
+    
+        $updateFields = [];
+        $params = [];
+        $types = "";
+    
+        foreach ($data as $column => $value) {
+            $safeColumn = $conn->real_escape_string($column);
+            
+            // Ensure NULL is passed correctly
+            if ($value === null || $value === "") {
+                $updateFields[] = "`$safeColumn` = NULL";
+            } else {
+                $updateFields[] = "`$safeColumn` = ?";
+                $params[] = $value;
+                $types .= "s"; // Adjust based on data type if needed
+            }
+        }
+    
+        $updateQuery = "UPDATE de_site SET " . implode(", ", $updateFields) . " WHERE tk_no = ?";
+        $params[] = $id;
+        $types .= "s"; // Assuming ID is a string, change to "i" if it's an integer
+    
+        $stmt = $conn->prepare($updateQuery);
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+    
+        if ($stmt->execute()) {
+            echo json_encode(["status" => 200, "message" => "DE data updated successfully"]);
+        } else {
+            http_response_code(409);
+            echo json_encode(["status" => 409, "error" => $stmt->error]);
+        }
+    
+        $stmt->close();
+        break;
+    
     default:
         http_response_code(405);
         echo json_encode(["status" => 405, "error" => "Invalid request method"]);
