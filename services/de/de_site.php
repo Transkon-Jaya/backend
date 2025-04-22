@@ -10,7 +10,7 @@ switch ($method) {
         $username = isset($_GET['username']) ? $conn->real_escape_string($_GET['username']) : null;
 
         // Base SQL query
-        $sql = "SELECT ds.tk_no, de.customer, de.alt_location, ds.comment, ds.down_since, ds.estimated_return, ds.spare_exists
+        $sql = "SELECT ds.tk_no, de.customer, de.alt_location, ds.comment, ds.down_since, ds.estimated_return, ds.spare_exists,
                     ds.tk_no_spare, ds.username, ds.createdAt, ds.lastUpdated, de.vehicle_type , de.plate_no
                 FROM de_site ds 
                 INNER JOIN down_equipment de ON ds.tk_no = de.tk_no";
