@@ -56,9 +56,10 @@ switch ($method) {
         $comment = isset($input['comment']) ? $conn->real_escape_string($input['comment']) : null;
         $down_since = isset($input['down_since']) ? $conn->real_escape_string($input['down_since']) : null;
         $estimated_return = isset($input['estimated_return']) ? $conn->real_escape_string($input['estimated_return']) : null;
+        $spare_exists = isset($input['spare_exists']) ? $conn->real_escape_string($input['spare_exists']) : null;
 
-        $sql = "INSERT INTO de_site (tk_no, username, comment, down_since, estimated_return)
-                VALUES ('$tk_no', '$username', " . ($comment ? "'$comment'" : 'NULL') . ", " . ($down_since ? "'$down_since'" : 'NULL') . ", " . ($estimated_return ? "'$estimated_return'" : 'NULL') . ")";
+        $sql = "INSERT INTO de_site (tk_no, username, comment, down_since, estimated_return, spare_exists)
+                VALUES ('$tk_no', '$username', " . ($comment ? "'$comment'" : 'NULL') . ", " . ($down_since ? "'$down_since'" : 'NULL') . ", " . ($estimated_return ? "'$estimated_return'" : 'NULL') . ($spare_exists ? "'$spare_exists'" : 'NULL') . ")";
 
         if ($conn->query($sql)) {
             echo json_encode(["status" => 200, "message" => "Data inserted successfully"]);
@@ -89,13 +90,15 @@ switch ($method) {
         $comment = isset($input['comment']) ? $conn->real_escape_string($input['comment']) : null;
         $down_since = isset($input['down_since']) ? $conn->real_escape_string($input['down_since']) : null;
         $estimated_return = isset($input['estimated_return']) ? $conn->real_escape_string($input['estimated_return']) : null;
-
+        $spare_exists = isset($input['spare_exists']) ? $conn->real_escape_string($input['spare_exists']) : null;
+        
         // Prepare SQL with conditional null values
         $sql = "UPDATE de_site 
                 SET 
                     comment = " . ($comment ? "'$comment'" : 'NULL') . ",
                     down_since = " . ($down_since ? "'$down_since'" : 'NULL') . ",
                     estimated_return = " . ($estimated_return ? "'$estimated_return'" : 'NULL') . "
+                    spare_exists = " . ($spare_exists ? "'$spare_exists'" : 'NULL') . "
                 WHERE tk_no = '$tk_no' AND username = '$username'";
 
         if ($conn->query($sql)) {
