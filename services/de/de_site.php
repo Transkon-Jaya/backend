@@ -67,6 +67,38 @@ switch ($method) {
 
         break;
 
+    case 'PUT':
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $required = ['tk_no', 'username', 'comment', 'down_since', 'estimated_return'];
+        foreach ($required as $field) {
+            if (empty($input[$field])) {
+                http_response_code(400);
+                echo json_encode(["status" => 400, "error" => "$field is required"]);
+                exit;
+            }
+        }
+
+        $tk_no = $conn->real_escape_string($input['tk_no']);
+        $username = $conn->real_escape_string($input['username']);
+        $comment = $conn->real_escape_string($input['comment']);
+        $down_since = $conn->real_escape_string($input['down_since']);
+        $estimated_return = $conn->real_escape_string($input['estimated_return']);
+
+        $sql = "UPDATE de_site 
+                SET comment = '$comment',
+                    down_since = '$down_since',
+                    estimated_return = '$estimated_return'
+                WHERE tk_no = '$tk_no' AND username = '$username'";
+
+        if ($conn->query($sql)) {
+            echo json_encode(["status" => 200, "message" => "Data updated successfully"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => $conn->error]);
+        }
+        break;
+
     default:
         http_response_code(405);
         echo json_encode(["status" => 405, "error" => "Invalid request method"]);
