@@ -38,8 +38,8 @@ switch ($method) {
         // Get JSON input
         $input = json_decode(file_get_contents('php://input'), true);
 
-        // Validate input
-        $required = ['tk_no', 'username', 'comment', 'down_since', 'estimated_return'];
+        // Validate required fields
+        $required = ['tk_no', 'username'];
         foreach ($required as $field) {
             if (empty($input[$field])) {
                 http_response_code(400);
@@ -51,12 +51,14 @@ switch ($method) {
         // Escape values
         $tk_no = $conn->real_escape_string($input['tk_no']);
         $username = $conn->real_escape_string($input['username']);
-        $comment = $conn->real_escape_string($input['comment']);
-        $down_since = $conn->real_escape_string($input['down_since']);
-        $estimated_return = $conn->real_escape_string($input['estimated_return']);
+
+        // Check for optional fields, set to NULL if not present
+        $comment = isset($input['comment']) ? $conn->real_escape_string($input['comment']) : null;
+        $down_since = isset($input['down_since']) ? $conn->real_escape_string($input['down_since']) : null;
+        $estimated_return = isset($input['estimated_return']) ? $conn->real_escape_string($input['estimated_return']) : null;
 
         $sql = "INSERT INTO de_site (tk_no, username, comment, down_since, estimated_return)
-                VALUES ('$tk_no', '$username', '$comment', '$down_since', '$estimated_return')";
+                VALUES ('$tk_no', '$username', " . ($comment ? "'$comment'" : 'NULL') . ", " . ($down_since ? "'$down_since'" : 'NULL') . ", " . ($estimated_return ? "'$estimated_return'" : 'NULL') . ")";
 
         if ($conn->query($sql)) {
             echo json_encode(["status" => 200, "message" => "Data inserted successfully"]);
@@ -70,7 +72,8 @@ switch ($method) {
     case 'PUT':
         $input = json_decode(file_get_contents('php://input'), true);
 
-        $required = ['tk_no', 'username', 'comment', 'down_since', 'estimated_return'];
+        // Validate required fields
+        $required = ['tk_no', 'username'];
         foreach ($required as $field) {
             if (empty($input[$field])) {
                 http_response_code(400);
@@ -81,14 +84,18 @@ switch ($method) {
 
         $tk_no = $conn->real_escape_string($input['tk_no']);
         $username = $conn->real_escape_string($input['username']);
-        $comment = $conn->real_escape_string($input['comment']);
-        $down_since = $conn->real_escape_string($input['down_since']);
-        $estimated_return = $conn->real_escape_string($input['estimated_return']);
 
+        // Check for optional fields, set to NULL if not present
+        $comment = isset($input['comment']) ? $conn->real_escape_string($input['comment']) : null;
+        $down_since = isset($input['down_since']) ? $conn->real_escape_string($input['down_since']) : null;
+        $estimated_return = isset($input['estimated_return']) ? $conn->real_escape_string($input['estimated_return']) : null;
+
+        // Prepare SQL with conditional null values
         $sql = "UPDATE de_site 
-                SET comment = '$comment',
-                    down_since = '$down_since',
-                    estimated_return = '$estimated_return'
+                SET 
+                    comment = " . ($comment ? "'$comment'" : 'NULL') . ",
+                    down_since = " . ($down_since ? "'$down_since'" : 'NULL') . ",
+                    estimated_return = " . ($estimated_return ? "'$estimated_return'" : 'NULL') . "
                 WHERE tk_no = '$tk_no' AND username = '$username'";
 
         if ($conn->query($sql)) {
