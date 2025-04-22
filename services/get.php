@@ -14,6 +14,10 @@ $allowed_routes = [
         'query' => 'SELECT vehicle_type FROM down_equipment WHERE tk_no = ?',
         'params' => 1
     ],
+    'get/total_rental' => [
+        'query' => "SELECT count(status_unit_3) AS total FROM down_equipment de WHERE status_unit_3 = 'Rental'",
+        'params' => 0
+    ],
     'get/double' => [
         'query' => 'SELECT vehicle_type FROM down_equipment WHERE tk_no = ? AND hub = ?',
         'params' => 2
