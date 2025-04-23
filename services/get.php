@@ -18,9 +18,9 @@ $allowed_routes = [
         'query' => 
             "SELECT count(status_unit_3) AS total FROM down_equipment de 
             WHERE status_unit_3 = 'Rental'
-            UNION
+            UNION ALL
             SELECT COUNT(spare_exists) AS total FROM de_site ds WHERE done = 0 AND spare_exists = 0
-            UNION
+            UNION ALL
             SELECT COUNT(spare_exists) AS total FROM de_site ds WHERE done = 0 AND spare_exists = 1
             ",
         'params' => 0
