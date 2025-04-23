@@ -10,8 +10,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     case 'GET':
         $sql = "SELECT de.tk_no, de.vehicle_type, de.plate_no, de.customer, de.alt_location
-                , ds.comment, ds.down_since, ds.estimated_return, ds.spare_exists, ds.tk_no_spare
-                , ds.username, ds.createdAt, ds.lastUpdated 
+                , ds.* 
                 FROM down_equipment de 
                 LEFT JOIN de_site ds 
                 ON de.tk_no = ds.tk_no
