@@ -11,7 +11,7 @@ require_once __DIR__ . '/../db.php';
 // Define allowed routes with query and parameter count
 $allowed_routes = [
     'get/plate_no' => [
-        'query' => "SELECT plate_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no = ?",
+        'query' => "SELECT plate_no FROM down_equipment WHERE tk_no = ?",
         'params' => 1
     ],
     'get/vehicle_type' => [
