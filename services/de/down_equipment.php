@@ -9,7 +9,10 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $sql = "SELECT * FROM down_equipment";
+        $sql = "SELECT de.vehicle_type, de.plate_no, de.customer, de.alt_location, ds.* FROM down_equipment de 
+                LEFT JOIN de_site ds 
+                ON de.tk_no = ds.tk_no
+                WHERE status_unit_3 = 'Rental'";
         $result = $conn->query($sql);
 
         if (!$result) {
