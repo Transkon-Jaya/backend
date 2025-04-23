@@ -15,7 +15,7 @@ switch ($method) {
                 FROM down_equipment de 
                 LEFT JOIN de_site ds 
                 ON de.tk_no = ds.tk_no
-                WHERE status_unit_3 = 'Rental'";
+                WHERE status_unit_3 = 'Rental' AND (ds.done is null OR ds.done = 0)";
         $result = $conn->query($sql);
 
         if (!$result) {
