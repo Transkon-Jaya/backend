@@ -15,7 +15,7 @@ $allowed_routes = [
         'params' => 1
     ],
     'call/de_total_rental' => [
-        'query' => 'CALL de_total_rental2()',
+        'query' => 'CALL de_total_rental()',
         'params' => 0
     ],
 ];
