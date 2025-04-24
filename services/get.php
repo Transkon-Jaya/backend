@@ -13,7 +13,7 @@ $allowed_routes = [
     'get/de_running_total' => [
         'query' => 'CALL de_running_total(?)',
         'params' => 1
-    ]
+    ],
     'get/plate_no' => [
         'query' => "SELECT plate_no FROM down_equipment WHERE tk_no = ?",
         'params' => 1
