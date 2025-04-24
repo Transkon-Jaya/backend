@@ -90,7 +90,7 @@ if (isset($allowed_routes[$request])) {
         $result = $stmt->get_result();
         $data = [];
         while ($row = $result->fetch_row()) {
-            $data[] = $row[0]; // Return flat array of values
+            $data[] = $row; // Return flat array of values
         }
         echo json_encode($data);
     } else {
