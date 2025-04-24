@@ -14,6 +14,10 @@ $allowed_routes = [
         'query' => 'CALL de_running_total(?)',
         'params' => 1
     ],
+    'call/de_total_rental' => [
+        'query' => 'CALL de_total_rental()',
+        'params' => 0
+    ],
 ];
 
 // Get the requested route
