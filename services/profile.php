@@ -1,6 +1,8 @@
 <?php
 header("Content-Type: application/json");
 require 'db.php';
+
+// Include compressResize.php utility script
 require 'utils/compressResize.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -72,14 +74,12 @@ switch ($method) {
 
             $uploadPath = $uploadDir . $fileName;
 
-            // Compress and resize the image
-            $compressResizePath = '/var/www/html/yourpath/compressResize.php'; // Update the path as needed
-            $cmd = "php $compressResizePath --source " . escapeshellarg($profilePicture['tmp_name']) . " --destination " . escapeshellarg($uploadPath) . " --max-width 500 --max-height 500";
-            exec($cmd, $output, $return_var);
+            // Call the compressResize function from utils/compressResize.php
+            $resizeResult = compressAndResizeImage($profilePicture['tmp_name'], $uploadPath, 500, 500);
 
-            if ($return_var !== 0) {
+            if (!$resizeResult) {
                 http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "File resize and compress failed.", "output" => $output]);
+                echo json_encode(["status" => 500, "error" => "File resize and compress failed."]);
                 break;
             }
             $isMoved = true;
