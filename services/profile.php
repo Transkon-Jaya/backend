@@ -1,7 +1,6 @@
 <?php
 header("Content-Type: application/json");
 require 'db.php';
-
 require 'utils/compressResize.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -11,8 +10,10 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
-$message = "";
-$fileName = "";
+$response = [
+    "status" => "error",
+    "message" => "Unknown error"
+];
 
 switch ($method) {
     case 'GET':
@@ -43,16 +44,16 @@ switch ($method) {
     case 'POST':
         // Get JSON data (non-file fields)
         $data = $_POST;
-    
         if (!$data || !isset($data['username'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Invalid input."]);
             break;
         }
         $username = $data['username'];
+        $isMoved = false;
+        $fileName = "";
+
         // File upload handling
-        $isMoved = true;
-    
         if (isset($_FILES['profilePicture'])) {
             $profilePicture = $_FILES['profilePicture'];
             
@@ -63,27 +64,27 @@ switch ($method) {
                 echo json_encode(["status" => 400, "error" => "Invalid file type."]);
                 break;
             }
-    
+
             // File compression and resizing
             $ext = pathinfo($profilePicture["name"], PATHINFO_EXTENSION);
             $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
             $fileName = $cleanUsername . "_" . time() . "." . $ext;
-    
+
             $uploadPath = $uploadDir . $fileName;
-    
-            // Use compressResize.php to resize and compress the image
+
+            // Compress and resize the image
             $compressResizePath = '/var/www/html/yourpath/compressResize.php'; // Update the path as needed
             $cmd = "php $compressResizePath --source " . escapeshellarg($profilePicture['tmp_name']) . " --destination " . escapeshellarg($uploadPath) . " --max-width 500 --max-height 500";
             exec($cmd, $output, $return_var);
-    
+
             if ($return_var !== 0) {
                 http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "File resize and compress failed."]);
+                echo json_encode(["status" => 500, "error" => "File resize and compress failed.", "output" => $output]);
                 break;
             }
             $isMoved = true;
         }
-    
+
         // Update other fields and handle file path if needed
         $name = $data['name'];
         $email = $data['email'] ?? null;
@@ -91,7 +92,7 @@ switch ($method) {
         $department = $data['department'];
         $position = $data['position'];
         $password = isset($data['password']) ? password_hash($data['password'], PASSWORD_DEFAULT) : null;
-    
+
         if ($isMoved) {
             $sql = "CALL user_profile_update(?, ?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($sql);
@@ -101,32 +102,35 @@ switch ($method) {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssss", $username, $name, $department, $position, $email, $phone);
         }
-        $stmt->execute();
+
+        if (!$stmt->execute()) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "Database error: " . $stmt->error]);
+            break;
+        }
         $stmt->close();
-        
-        // 2. Conditionally update password if provided
+
+        // Conditionally update password if provided
         if (!empty($data['password'])) {
             $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-            
+
             $sql = "CALL user_passwd_update(?, ?)";
             $stmt = $conn->prepare($sql);
-            
             if (!$stmt) {
                 http_response_code(500);
-                echo json_encode(["status" => 500, "error" => $conn->error]);
+                echo json_encode(["status" => 500, "error" => "Password update failed: " . $conn->error]);
                 break;
             }
-            
+
             $stmt->bind_param("ss", $username, $hashedPassword);
             $stmt->execute();
             $stmt->close();
         }
-        
-        // 3. Final response
+
+        // Final response
         echo json_encode(["status" => 200, "message" => "Success", "foto" => $fileName]);
         break;
-        
-            
+
     default:
         http_response_code(405);
         echo json_encode(["status" => 405, "error" => "Invalid request method"]);
@@ -135,4 +139,3 @@ switch ($method) {
 
 $conn->close();
 ?>
-
