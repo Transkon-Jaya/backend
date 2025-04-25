@@ -1,6 +1,5 @@
 <?php
 require 'db.php';
-require 'utils/compressResize.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -32,24 +31,19 @@ if (!$username) {
     exit();
 }
 
-// File info
+// Upload file
 $file = $_FILES["foto"];
 $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
+
+
 $status = $_POST["status"] ?? null;
 $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
 $cleanStatus = preg_replace("/[^a-zA-Z0-9_-]/", "", $status);
+
 $uniqueName = $cleanUsername . '_' . $cleanStatus . '_' . time() . '.' . $ext;
 $uploadPath = $uploadDir . $uniqueName;
 
-// Compress & resize
-$tempPath = $file["tmp_name"];
-if (!compressAndResizeImage($tempPath, $uploadPath)) {
-    $response["message"] = "Image compression failed.";
-    echo json_encode($response);
-    exit();
-}
-
-// Form data
+// Get form data
 $id = $_POST["id"] ?? null;
 $date = $_POST["date"] ?? date("Y-m-d");
 $long = $_POST["long"] ?? null;
@@ -70,30 +64,49 @@ $calculation_overtime_1x3 = $_POST["calculation_overtime_1x3"] ?? null;
 $calculation_overtime_1x4 = $_POST["calculation_overtime_1x4"] ?? null;
 $total = $_POST["total"] ?? null;
 
-// Insert or update
-if ($status === "IN") {
-    $stmt = $conn->prepare("
-        INSERT INTO hr_absensi (
-            username, tanggal, foto_in, lokasi_in, longitude_in, latitude_in, ip_in, jarak_in, hour_in
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
-    ");
-    $stmt->bind_param("ssssssss", $username, $date, $uniqueName, $lokasi, $long, $lang, $ip, $jarak);
+
+if (move_uploaded_file($file["tmp_name"], $uploadPath)) {
+    if ($status === "IN"){
+        $stmt = $conn->prepare("
+            INSERT INTO hr_absensi (
+                username, tanggal, foto_in, lokasi_in, longitude_in, latitude_in, ip_in, jarak_in, hour_in
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
+        ");
+        $stmt->bind_param(
+            "ssssssss",
+            $username, $date, $uniqueName, $lokasi, $long, $lang, $ip, $jarak
+        );
+    }
+    else{
+        $stmt = $conn->prepare("
+            UPDATE hr_absensi SET
+                foto_out = ?,
+                lokasi_out = ?,
+                longitude_out = ?,
+                latitude_out = ?,
+                ip_out = ?,
+                jarak_out = ?,
+                hour_out = CURRENT_TIMESTAMP()
+            WHERE id = ?
+        ");
+        $stmt->bind_param(
+            "sssssss",
+            $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $id
+        );
+    }
+
+    if ($stmt->execute()) {
+        $response["status"] = "success";
+        $response["message"] = "Attendance recorded successfully.";
+        // $response["foto"] = $uploadPath;
+    } else {
+        $response["message"] = "Database error: " . $stmt->error;
+    }
+
+    $stmt->close();
 } else {
-    $stmt = $conn->prepare("
-        UPDATE hr_absensi SET
-            foto_out = ?, lokasi_out = ?, longitude_out = ?, latitude_out = ?, ip_out = ?, jarak_out = ?, hour_out = CURRENT_TIMESTAMP()
-        WHERE id = ?
-    ");
-    $stmt->bind_param("sssssss", $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $id);
+    $response["message"] = "Failed to move uploaded file.";
 }
 
-if ($stmt->execute()) {
-    $response["status"] = "success";
-    $response["message"] = "Attendance recorded successfully.";
-} else {
-    $response["message"] = "Database error: " . $stmt->error;
-}
-
-$stmt->close();
 $conn->close();
 echo json_encode($response);
