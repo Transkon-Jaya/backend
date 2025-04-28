@@ -1,9 +1,9 @@
 <?php
 header("Content-Type: application/json");
-require 'db.php';
+include 'db.php';
 
 // Include compressResize.php utility script
-require 'utils/compressResize.php';
+include 'utils/compressResize.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
