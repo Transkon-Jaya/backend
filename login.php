@@ -60,7 +60,7 @@ if ($user) {
 
     if (password_verify($password, $user['passwd'])) {
         $issued_at = time();
-        $expiration_time = $issued_at + (60 * 60 * 24); // Token expires in 1 day
+        $expiration_time = $issued_at + (10); // Token expires in 1 day
         $payload = [
             "username" => $username,
             "photo" => $photo,
