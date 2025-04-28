@@ -56,8 +56,8 @@ switch ($method) {
         $fileName = "";
 
         // File upload handling
-        if (isset($_FILES['profilePicture'])) {
-            $profilePicture = $_FILES['profilePicture'];
+        if (isset($_FILES['picture'])) {
+            $profilePicture = $_FILES['picture'];
             
             // Check if the file is a valid image
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
