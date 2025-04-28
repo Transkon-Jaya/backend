@@ -77,16 +77,16 @@ if ($status === "IN") {
     $stmt = $conn->prepare("
         INSERT INTO hr_absensi (
             username, tanggal, foto_in, lokasi_in, longitude_in, latitude_in, ip_in, jarak_in, dim_in, device_in, hour_in
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP())
     ");
-    $stmt->bind_param("ssssssss", $username, $date, $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $dim, $device);
+    $stmt->bind_param("ssssssssss", $username, $date, $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $dim, $device);
 } else {
     $stmt = $conn->prepare("
         UPDATE hr_absensi SET
             foto_out = ?, lokasi_out = ?, longitude_out = ?, latitude_out = ?, ip_out = ?, jarak_out = ?, dim_out = ?, device_out = ?, hour_out = CURRENT_TIMESTAMP()
         WHERE id = ?
     ");
-    $stmt->bind_param("sssssss", $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $dim, $device, $id);
+    $stmt->bind_param("sssssssss", $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $dim, $device, $id);
 }
 
 if ($stmt->execute()) {
