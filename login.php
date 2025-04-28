@@ -46,6 +46,7 @@ $stmt->close();
 
 if ($user) {
     $user_level = $user["user_level"];
+    $photo = $user["photo"];
     $sql = "CALL user_get_permissions(?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $username);
@@ -62,13 +63,14 @@ if ($user) {
         $expiration_time = $issued_at + (60 * 60 * 24); // Token expires in 1 day
         $payload = [
             "username" => $username,
+            "photo" => $photo,
             "user_level" => $user_level,
             "permissions" => $permissions,
             "exp" => $expiration_time
         ];
         http_response_code(200);
         $jwt = JWT::encode($payload, $secret_key, 'HS256');
-        echo json_encode(["status" => 200, "token" => $jwt, "user_level" => $user_level, "permissions" => $permissions]);
+        echo json_encode(["status" => 200, "token" => $jwt, "photo" => $photo, "user_level" => $user_level, "permissions" => $permissions]);
     } else {
         http_response_code(401);
         echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
