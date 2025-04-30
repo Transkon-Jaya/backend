@@ -16,7 +16,7 @@ $allowed_routes = [
     'dropdowns/vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
     'dropdowns/op_svc_category' => 'SELECT category FROM op_svc_category ORDER BY priority',
     'dropdowns/op_svc_category_engine' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Engine'",
-    'dropdowns/op_svc_category_driveTrain' => "SELECT problem FROM op_svc_category_problem WHERE category = 'DriveTrain'",
+    'dropdowns/op_svc_category_driveTrain' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Drive Train'",
     'dropdowns/op_svc_category_chasis' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Chasis'",
     'dropdowns/op_svc_category_electricalBody' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Electrical Body'",
     'dropdowns/op_svc_category_acSystem' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System'",
