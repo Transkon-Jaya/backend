@@ -13,7 +13,7 @@ switch ($method) {
         $sql = "SELECT ds.*, de.customer, de.alt_location, de.vehicle_type , de.plate_no
                 FROM de_site ds 
                 INNER JOIN down_equipment de ON ds.tk_no = de.tk_no
-                WHERE ds.done = false";
+                WHERE ds.done = false AND ds.deleted = false";
 
         // Add WHERE clause if username is provided
         if ($username !== null) {
