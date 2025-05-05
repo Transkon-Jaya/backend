@@ -15,8 +15,8 @@ $allowed_routes = [
         'params' => 3
     ],
     'chart/de_total_rental' => [
-        'query' => 'CALL de_total_rental()',
-        'params' => 0
+        'query' => 'CALL de_total_rental(?, ?)',
+        'params' => 2
     ],
     'chart/de_customer_summary' => [
         'query' => 'CALL de_customer_summary()',
