@@ -11,8 +11,8 @@ require_once __DIR__ . '/../db.php';
 // Define allowed routes with query and parameter count
 $allowed_routes = [
     'chart/de_running_total' => [
-        'query' => 'CALL de_running_total(?)',
-        'params' => 1
+        'query' => 'CALL de_running_total(?, ?, ?)',
+        'params' => 3
     ],
     'chart/de_total_rental' => [
         'query' => 'CALL de_total_rental()',
