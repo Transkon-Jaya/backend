@@ -23,14 +23,7 @@ $allowed_routes = [
         'params' => 1
     ],
     'get/total_rental' => [
-        'query' => 
-            "SELECT count(status_unit_3) AS total FROM down_equipment de 
-            WHERE status_unit_3 = 'Rental'
-            UNION ALL
-            SELECT COUNT(spare_exists) AS total FROM de_site ds WHERE done = 0 AND spare_exists = 0
-            UNION ALL
-            SELECT COUNT(spare_exists) AS total FROM de_site ds WHERE done = 0 AND spare_exists = 1
-            ",
+        'query' => "CALL de_total_rental()",
         'params' => 0
     ],
     'get/double' => [
