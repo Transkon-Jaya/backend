@@ -10,6 +10,10 @@ require_once __DIR__ . '/../db.php';
 
 // Define allowed routes with query and parameter count
 $allowed_routes = [
+    'get/myname' => [
+        'query' => 'SELECT name FROM user_profiles WHERE username = ?',
+        'params' => 1
+    ],
     'get/de_running_total' => [
         'query' => 'CALL de_running_total(?)',
         'params' => 1
