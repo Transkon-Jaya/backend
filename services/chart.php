@@ -28,7 +28,7 @@ $allowed_routes = [
     ],
     'chart/absensi_avg_hw' => [
         'query' => 'CALL absensi_avg_hw(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 3
+        'params' => 5
     ],
 ];
 
