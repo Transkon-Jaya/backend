@@ -26,6 +26,10 @@ $allowed_routes = [
         'query' => 'CALL de_location_summary()',
         'params' => 0
     ],
+    'chart/absensi_avg_hw' => [
+        'query' => 'CALL absensi_avg_hw(?, ?, ?)',
+        'params' => 3
+    ],
 ];
 
 // Get the requested route
