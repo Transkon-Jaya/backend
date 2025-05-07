@@ -10,6 +10,7 @@ require_once __DIR__ . '/../db.php';
 
 $allowed_routes = [
     'dropdowns/customer'     => 'SELECT DISTINCT name FROM customer',
+    'dropdowns/name'         => 'SELECT DISTINCT name FROM user_profiles',
     'dropdowns/department'   => 'SELECT DISTINCT department FROM user_profiles',
     'dropdowns/position'     => 'SELECT DISTINCT jabatan FROM user_profiles',
     'dropdowns/tk_no'        => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
