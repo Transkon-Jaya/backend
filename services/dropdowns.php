@@ -14,6 +14,7 @@ $allowed_routes = [
     'dropdowns/department'   => 'SELECT DISTINCT department FROM user_profiles',
     'dropdowns/position'     => 'SELECT DISTINCT jabatan FROM user_profiles',
     'dropdowns/tk_no'        => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
+    'dropdowns/tk_no_spare'  => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
     'dropdowns/vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
     'dropdowns/op_svc_category' => 'SELECT category FROM op_svc_category ORDER BY priority',
     'dropdowns/op_svc_category_engine' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Engine'",
