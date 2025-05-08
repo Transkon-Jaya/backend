@@ -28,14 +28,11 @@ $allowed_routes = [
     'webhook-fe'     => 'webhook-fe.php',
 ];
 
-// NEW: scalable route pattern matching
 $allowed_startswith = [
     'chart' => 'services/chart.php',
     'dropdowns' => 'services/dropdowns.php',
     'get'   => 'services/get.php',
-    // You can add more here later, like:
-    // 'uploads' => 'services/uploads.php',
-    // 'reports' => 'services/reports.php',
+    'data'  => 'services/data.php'
 ];
 
 $request = $_GET['request'] ?? '';
