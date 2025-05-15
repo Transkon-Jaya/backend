@@ -12,6 +12,7 @@ $allowed_routes = [
     'dropdowns/customer'     => 'SELECT DISTINCT name FROM customer',
     'dropdowns/name'         => 'SELECT DISTINCT name FROM user_profiles',
     'dropdowns/department'   => 'SELECT DISTINCT department FROM user_profiles',
+    'dropdowns/alt_location'  => 'SELECT DISTINCT alt_location FROM down_equipment',
     'dropdowns/position'     => 'SELECT DISTINCT jabatan FROM user_profiles',
     'dropdowns/tk_no'        => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
     'dropdowns/tk_no_spare'  => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
