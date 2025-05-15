@@ -14,6 +14,10 @@ $allowed_routes = [
         'query' => 'CALL hr_absensi_all(?, ?, ?)',
         'params' => 3
     ],
+    'data/hr_absensi_timesheet' => [
+        'query' => 'CALL hr_absensi_timesheet(?, ?, ?, ?, ?)',
+        'params' => 5
+    ]
 ];
 
 // Get the requested route
