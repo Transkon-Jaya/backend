@@ -34,6 +34,13 @@ switch ($method) {
         echo json_encode(["status" => 405, "error" => "Invalid request method"]);
         break;
 }
+if (!$result) {
+    error_log("SQL Error: " . $conn->error); // tambahkan ini
+    http_response_code(500);
+    echo json_encode(["status" => 500, "error" => $conn->error]);
+    break;
+}
+
 
 $conn->close();
 ?>
