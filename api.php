@@ -26,6 +26,7 @@ $allowed_routes = [
     'location'       => 'services/location.php',
     'webhook-be'     => 'webhook-be.php',
     'webhook-fe'     => 'webhook-fe.php',
+    'table_user'     => 'services/ip.php',
 ];
 
 $allowed_startswith = [
