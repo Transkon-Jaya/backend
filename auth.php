@@ -99,7 +99,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
     }
 
         // Bypass permission checks for user_level 0
-    if (isset($user['user_level']) && $user['user_level'] === 0) {
+    if (isset($user['user_level']) && $user['user_level'] === 1 && $user['user_level'] === 0) {
         return $user; // Admin bypass
     }
 
