@@ -80,7 +80,7 @@ function checkPermissions($required_permissions = [], $forbidden_permissions = [
 /**
  * Combines token verification, user level, required & forbidden permissions.
  */
-function authorize($required_level = null, $required_permissions = [], $forbidden_permissions = []) {
+function authorize($required_level = null, $required_permissions = [], $forbidden_permissions = [], $match_username = null) {
     // Token check
     $user = verifyToken();
 
@@ -101,6 +101,13 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
         // Bypass permission checks for user_level 0
     if (isset($user['user_level']) && $user['user_level'] === 0) {
         return $user; // Admin bypass
+    }
+
+        // Username match check (if specified)
+    if ($match_username !== null && (!isset($user['username']) || $user['username'] !== $match_username)) {
+        http_response_code(403);
+        echo json_encode(["status" => 403, "error" => "Forbidden - Username mismatch"]);
+        exit;
     }
 
     foreach ($required_permissions as $perm) {
