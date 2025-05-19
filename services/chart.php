@@ -98,7 +98,7 @@ if (isset($allowed_routes[$request])) {
         exit();
     }
 
-    $stmt = $conn->prepare($config['query'];);
+    $stmt = $conn->prepare($config['query']);
     if ($stmt === false) {
         http_response_code(500);
         echo json_encode(['status' => 500, 'error' => "Prepare failed: " . $conn->error]);
