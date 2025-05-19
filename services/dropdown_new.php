@@ -31,7 +31,7 @@ $prefix = 'ddn/';
 $allowed_routes = [
     $prefix.'customer' => [
         'query' => 'SELECT DISTINCT name FROM customer',
-        'params' => 0,
+        // 'params' => 0,
         'level' => 8,
         'permissions' => ["admin_absensi"],
         'not_permissions' => ["no_absensi"],
@@ -40,19 +40,27 @@ $allowed_routes = [
     $prefix.'hr_absensi' => [
         'query' => 'SELECT * from hr_absensi WHERE username = ?',
         'params' => 1,
-        'level' => 8,
+        // 'level' => 9,
         'permissions' => ["admin_absensi"],
         'not_permissions' => ["no_absensi"],
         'username' => $params[0]
-    ],
-    
+    ],  
+];
+
+$default_config = [
+    'params' => 0,
+    'level' => 9,
+    'permissions' => [],
+    'not_permissions' => [],
+    'username' => null
 ];
 
 // Get the requested route
 $request = $_GET['request'] ?? '';
 
 if (isset($allowed_routes[$request])) {
-    $config = $allowed_routes[$request];
+    $config = array_merge($default_config, $allowed_routes[$request]);
+    // $config = $allowed_routes[$request];
 
     // Authorize user
     authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
