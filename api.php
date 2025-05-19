@@ -28,6 +28,7 @@ $allowed_routes = [
     'webhook-be'     => 'webhook-be.php',
     'webhook-fe'     => 'webhook-fe.php',
     'table-user'     => 'services/hr/table-user.php',
+    'total-masuk'    => 'services/hr/total-masuk.php',
 ];
 
 $allowed_startswith = [
