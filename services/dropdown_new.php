@@ -69,7 +69,7 @@ $allowed_routes = [
         'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Electrical Body'",
     ],
     $prefix.'op_svc_category_acSystem' => [
-        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System'",
     ],
     $prefix.'op_svc_category_repairElectrical' => [
         'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Repair Electrical'",
