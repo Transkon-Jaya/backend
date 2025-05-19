@@ -60,11 +60,18 @@ $request = $_GET['request'] ?? '';
 
 if (isset($allowed_routes[$request])) {
     $config = array_merge($default_config, $allowed_routes[$request]);
-    // $config = $allowed_routes[$request];
 
-    // Authorize user
     authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
 
+    if (count($params) != $route['params']) {
+        http_response_code(400);
+        echo json_encode([
+            'status' => 400,
+            'error' => "Wrong parameters for '$request'"
+        ]);
+        exit();
+    }
+    
     // Prepare the query
     $stmt = $conn->prepare($config["query"]);
     if (!$stmt) {
