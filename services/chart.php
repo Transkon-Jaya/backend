@@ -7,45 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
 
 // Require DB connection
 require_once __DIR__ . '/../db.php';
-
-// Define allowed routes with query and parameter count
-$allowed_routes = [
-    'chart/de_running_total' => [
-        'query' => 'CALL de_running_total(?, ?, ?)',
-        'params' => 3
-    ],
-    'chart/de_total_rental' => [
-        'query' => 'CALL de_total_rental(?, ?)',
-        'params' => 2
-    ],
-    'chart/de_customer_summary' => [
-        'query' => 'CALL de_customer_summary()',
-        'params' => 0
-    ],
-    'chart/de_location_summary' => [
-        'query' => 'CALL de_location_summary()',
-        'params' => 0
-    ],
-    'chart/absensi_avg_hw' => [
-        'query' => 'CALL absensi_avg_hw(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
-    ],
-    'chart/absensi_avg_hi' => [
-        'query' => 'CALL absensi_avg_hi(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
-    ],
-    'chart/absensi_avg_ho' => [
-        'query' => 'CALL absensi_avg_ho(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
-    ],
-    'chart/absensi_avg_hio' => [
-        'query' => 'CALL absensi_avg_hio(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
-    ],
-];
-
-// Get the requested route
-$request = $_GET['request'] ?? '';
+require_once 'auth.php';
 
 // Fallback: If params[] is not provided, collect numeric keys like 0=, 1=, etc.
 if (isset($_GET['params'])) {
@@ -66,9 +28,65 @@ if (!is_array($params)) {
     $params = [$params]; // Normalize to array
 }
 
+// Define allowed routes with query and parameter count
+$prefix = 'chart/';
+$allowed_routes = [
+    //--ABSENSI START--//
+    $prefix.'absensi_avg_hw' => [
+        'query' => 'CALL absensi_avg_hw(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
+        'params' => 5
+    ],
+    $prefix.'absensi_avg_hi' => [
+        'query' => 'CALL absensi_avg_hi(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
+        'params' => 5
+    ],
+    $prefix.'absensi_avg_ho' => [
+        'query' => 'CALL absensi_avg_ho(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
+        'params' => 5
+    ],
+    $prefix.'absensi_avg_hio' => [
+        'query' => 'CALL absensi_avg_hio(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
+        'params' => 5
+    ],
+    //--ABSENSI END--//
+    //--DE START--//
+    $prefix.'de_running_total' => [
+        'query' => 'CALL de_running_total(?, ?, ?)',
+        'params' => 3
+    ],
+    $prefix.'de_total_rental' => [
+        'query' => 'CALL de_total_rental(?, ?)',
+        'params' => 2
+    ],
+    $prefix.'de_customer_summary' => [
+        'query' => 'CALL de_customer_summary()',
+        'params' => 0
+    ],
+    $prefix.'de_location_summary' => [
+        'query' => 'CALL de_location_summary()',
+        'params' => 0
+    ],
+    //--DE END--//
+];
+
+$default_config = [
+    'params' => 0,
+    'auth' => true,
+    'level' => 9,
+    'permissions' => [],
+    'not_permissions' => [],
+    'username' => null
+];
+
+// Get the requested route
+$request = $_GET['request'] ?? '';
+
 if (isset($allowed_routes[$request])) {
-    $route = $allowed_routes[$request];
-    $query = $route['query'];
+    $config = array_merge($default_config, $allowed_routes[$request]);
+    
+    if($config["auth"]){
+        authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
+    }
 
     // Check if required number of params is provided
     if (count($params) != $route['params']) {
@@ -80,7 +98,7 @@ if (isset($allowed_routes[$request])) {
         exit();
     }
 
-    $stmt = $conn->prepare($query);
+    $stmt = $conn->prepare($config['query'];);
     if ($stmt === false) {
         http_response_code(500);
         echo json_encode(['status' => 500, 'error' => "Prepare failed: " . $conn->error]);

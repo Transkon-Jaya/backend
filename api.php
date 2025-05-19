@@ -33,8 +33,7 @@ $allowed_routes = [
 
 $allowed_startswith = [
     'chart' => 'services/chart.php',
-    'dropdowns' => 'services/dropdown_new.php',
-    'ddn' => "services/dropdown_new.php",
+    'dropdowns' => 'services/dropdowns.php',
     'get'   => 'services/get.php',
     'data'  => 'services/data.php'
 ];
