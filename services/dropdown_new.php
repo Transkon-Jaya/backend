@@ -19,22 +19,15 @@ $allowed_routes = [
         'not_permissions' => ["no_absensi"],
         'username' => $_GET['username'] ?? null
     ],
-    $prefix.'name'         => 'SELECT DISTINCT name FROM user_profiles',
-    $prefix.'department'   => 'SELECT DISTINCT department FROM user_profiles',
-    $prefix.'alt_location'  => 'SELECT DISTINCT alt_location FROM down_equipment',
-    $prefix.'position'     => 'SELECT DISTINCT jabatan FROM user_profiles',
-    $prefix.'tk_no'        => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
-    $prefix.'tk_no_spare'  => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
-    $prefix.'vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
-    $prefix.'op_svc_category' => 'SELECT category FROM op_svc_category ORDER BY priority',
-    $prefix.'op_svc_category_engine' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Engine'",
-    $prefix.'op_svc_category_driveTrain' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Drive Train'",
-    $prefix.'op_svc_category_chasis' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Chasis'",
-    $prefix.'op_svc_category_electricalBody' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Electrical Body'",
-    $prefix.'op_svc_category_acSystem' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System'",
-    $prefix.'op_svc_category_repairElectrical' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Repair Electrical'",
-    $prefix.'op_svc_category_defact' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Defact'",
-    $prefix.'op_svc_category_body' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Body'"
+    $prefix.'hr_absensi' => [
+        'query' => 'SELECT * from hr_absensi WHERE username = ?',
+        'params' => 1,
+        'level' => 8,
+        'permissions' => ["admin_absensi"],
+        'not_permissions' => ["no_absensi"],
+        'username' => $_GET['0'] ?? null
+    ],
+    
 ];
 
 // Get the requested route
@@ -42,24 +35,47 @@ $request = $_GET['request'] ?? '';
 
 if (isset($allowed_routes[$request])) {
     $config = $allowed_routes[$request];
-    authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
-    $query = $config["query"];
-    $result = $conn->query($query);
 
-    if ($result) {
+    // Authorize user
+    authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
+
+    // Prepare the query
+    $stmt = $conn->prepare($config["query"]);
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(['status' => 500, 'error' => 'Prepare failed: ' . $conn->error]);
+        exit();
+    }
+
+    // Bind parameters dynamically if needed
+    if ($config["params"] > 0) {
+        $types = str_repeat('s', $config["params"]); // all params as strings
+        $params = [];
+
+        for ($i = 0; $i < $config["params"]; $i++) {
+            $paramKey = (string) $i;
+            $params[] = $_GET[$paramKey] ?? '';
+        }
+
+        $stmt->bind_param($types, ...$params);
+    }
+
+    // Execute and fetch result
+    if ($stmt->execute()) {
+        $result = $stmt->get_result();
         $data = [];
+
         while ($row = $result->fetch_row()) {
-            $data[] = $row[0];
+            $data[] = (count($row) === 1) ? $row[0] : $row;
         }
 
         echo json_encode($data);
     } else {
         http_response_code(500);
-        echo json_encode([
-            'status' => 500,
-            'error' => "Query failed: " . $conn->error
-        ]);
+        echo json_encode(['status' => 500, 'error' => 'Execution failed: ' . $stmt->error]);
     }
+
+    $stmt->close();
 } else {
     http_response_code(404);
     echo json_encode([
