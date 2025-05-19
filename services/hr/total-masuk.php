@@ -4,39 +4,42 @@ require 'db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-switch ($method) {
-    case 'GET':
-        if (!isset($_GET['username'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "No Username!"]);
-            break;
-        }
-
-        $username = $conn->real_escape_string($_GET['username']);
-        $sql = "SELECT COUNT(DISTINCT username) AS total_masuk
-                FROM hr_absensi
-                WHERE tanggal = CURDATE()
-                AND (hour_in IS NOT NULL);";
-        $result = $conn->query($sql);
-        if (!$result) {
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $conn->error]);
-            break;
-        }
-
-        $status = [];
-        while ($row = $result->fetch_assoc()) {
-            $status[] = $row;
-        }
-
-        echo json_encode($status);
-        break;
-
-    default:
-        http_response_code(405);
-        echo json_encode(["status" => 405, "error" => "Invalid request method"]);
-        break;
+if ($method != 'GET') {
+    http_response_code(405);
+    echo json_encode(["status" => 405, "message" => "Method not allowed"]);
+    exit;
 }
 
-$conn->close();
+try {
+    // Query untuk menghitung total karyawan masuk hari ini
+    $sql = "SELECT COUNT(DISTINCT username) AS total_masuk 
+            FROM hr_absensi 
+            WHERE tanggal = CURDATE() 
+            AND hour_in IS NOT NULL";
+    
+    $result = $conn->query($sql);
+    
+    if (!$result) {
+        throw new Exception("Database error: " . $conn->error);
+    }
+    
+    $data = $result->fetch_assoc();
+    
+    echo json_encode([
+        "status" => 200,
+        "data" => [
+            "total_masuk" => (int)$data['total_masuk']
+        ]
+    ]);
+    
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        "status" => 500,
+        "message" => "Server error",
+        "error" => $e->getMessage()
+    ]);
+} finally {
+    $conn->close();
+}
 ?>
