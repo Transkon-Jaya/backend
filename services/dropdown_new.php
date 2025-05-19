@@ -7,16 +7,17 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 
 // Require DB connection
 require_once __DIR__ . '/../db.php';
+require_once 'auth.php';
 
 $prefix = 'ddn/';
 $allowed_routes = [
     $prefix.'customer' => [
         'query' => 'SELECT DISTINCT name FROM customer',
         'params' => 0,
-        'level' => 5,
-        'permissions' => [],
-        'not_permissions' => [],
-        'usernamematch' => null
+        'level' => 8,
+        'permissions' => ["admin_absensi"],
+        'not_permissions' => ["no_absensi"],
+        'username' => $_GET['username'] ?? null
     ],
     $prefix.'name'         => 'SELECT DISTINCT name FROM user_profiles',
     $prefix.'department'   => 'SELECT DISTINCT department FROM user_profiles',
@@ -40,7 +41,8 @@ $allowed_routes = [
 $request = $_GET['request'] ?? '';
 
 if (isset($allowed_routes[$request])) {
-    $config = $allowed_routes[$request]; 
+    $config = $allowed_routes[$request];
+    authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
     $query = $config["query"];
     $result = $conn->query($query);
 
