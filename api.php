@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 
 $allowed_routes = [
     'ip'             => 'services/ip.php',
+    'ip-auth'        => 'services/ip-auth.php',
     'test'           => 'test.php',
     'login'          => 'login.php',
     'absensi'        => 'services/hr/absensi.php',
