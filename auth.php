@@ -98,6 +98,11 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
         exit;
     }
 
+        // Bypass permission checks for user_level 0
+    if (isset($user['user_level']) && $user['user_level'] === 0) {
+        return $user; // Admin bypass
+    }
+
     foreach ($required_permissions as $perm) {
         if (!in_array($perm, $user['permissions'])) {
             http_response_code(403);
