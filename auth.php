@@ -104,7 +104,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
     }
 
         // Username match check (if specified)
-    if ($match_username !== null && (!isset($user['username']) || $user['username'] !== $match_username)) {
+    if ($match_username !== null && (!isset($user['username']) || $user['username'] !== strtolower($match_username))) {
         http_response_code(403);
         echo json_encode(["status" => 403, "error" => "Forbidden - Username mismatch"]);
         exit;
