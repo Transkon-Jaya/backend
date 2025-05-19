@@ -30,21 +30,56 @@ if (!is_array($params)) {
 $prefix = 'ddn/';
 $allowed_routes = [
     $prefix.'customer' => [
-        'query' => 'SELECT DISTINCT name FROM customer',
-        // 'params' => 0,
-        'level' => 8,
-        'permissions' => ["admin_absensi"],
-        'not_permissions' => ["no_absensi"],
-        'username' => $_GET['username'] ?? null
+        'query' => "SELECT DISTINCT name FROM customer",
     ],
-    $prefix.'hr_absensi' => [
-        'query' => 'SELECT * from hr_absensi WHERE username = ?',
-        'params' => 1,
-        // 'level' => 9,
-        'permissions' => ["admin_absensi"],
-        'not_permissions' => ["no_absensi"],
-        'username' => $params[0]
-    ],  
+    $prefix.'name' => [
+        'query' => 'SELECT DISTINCT name FROM user_profiles',
+    ],
+    $prefix.'department' => [
+        'query' => "SELECT DISTINCT department FROM user_profiles",
+    ],
+    $prefix.'alt_location' => [
+        'query' => "SELECT DISTINCT alt_location FROM down_equipment",
+    ],
+    $prefix.'position' => [
+        'query' => "",
+    ],
+    $prefix.'tk_no' => [
+        'query' => "",
+    ],
+    $prefix.'tk_no_spare' => [
+        'query' => "",
+    ],
+    $prefix.'vehicle_type' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_engine' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_driveTrain' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_chasis' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_electricalBody' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_acSystem' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_repairElectrical' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_defact' => [
+        'query' => "",
+    ],
+    $prefix.'op_svc_category_body' => [
+        'query' => "",
+    ],
 ];
 
 $default_config = [
