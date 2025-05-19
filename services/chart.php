@@ -89,7 +89,7 @@ if (isset($allowed_routes[$request])) {
     }
 
     // Check if required number of params is provided
-    if (count($params) != $route['params']) {
+    if (count($params) != $config['params']) {
         http_response_code(400);
         echo json_encode([
             'status' => 400,
