@@ -88,6 +88,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
     if ($required_level !== null && (!isset($user['user_level']) || $user['user_level'] > $required_level)) {
         http_response_code(403);
         echo json_encode(["status" => 403, "error" => "Forbidden - Insufficient user level"]);
+        // echo json_encode(["status" => 403, "error" => "Forbidden"]);
         exit;
     }
 
@@ -95,6 +96,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
     if (!isset($user['permissions']) || !is_array($user['permissions'])) {
         http_response_code(403);
         echo json_encode(["status" => 403, "error" => "Forbidden - Permissions data missing"]);
+        // echo json_encode(["status" => 403, "error" => "Forbidden"]);
         exit;
     }
 
@@ -107,6 +109,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
     if ($match_username !== null && (!isset($user['username']) || $user['username'] !== strtolower($match_username))) {
         http_response_code(403);
         echo json_encode(["status" => 403, "error" => "Forbidden - Username mismatch"]);
+        // echo json_encode(["status" => 403, "error" => "Forbidden"]);
         exit;
     }
 
@@ -117,6 +120,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
                 "status" => 403,
                 "error" => "Forbidden - Missing required permission: $perm"
             ]);
+             // echo json_encode(["status" => 403, "error" => "Forbidden"]);
             exit;
         }
     }
@@ -128,6 +132,7 @@ function authorize($required_level = null, $required_permissions = [], $forbidde
                 "status" => 403,
                 "error" => "Forbidden - Permission not allowed: $perm"
             ]);
+            // echo json_encode(["status" => 403, "error" => "Forbidden"]);
             exit;
         }
     }
