@@ -5,9 +5,27 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     exit();
 }
 
-// Require DB connection
 require_once __DIR__ . '/../db.php';
 require_once 'auth.php';
+
+// Fallback: If params[] is not provided, collect numeric keys like 0=, 1=, etc.
+if (isset($_GET['params'])) {
+    $params = $_GET['params'];
+    if (!is_array($params)) $params = [$params];
+} else {
+    $params = [];
+    foreach ($_GET as $key => $val) {
+        if (is_numeric($key)) {
+            $params[(int)$key] = $val;
+        }
+    }
+    ksort($params); // Ensure proper order: 0,1,2...
+    $params = array_values($params); // Reindex
+}
+
+if (!is_array($params)) {
+    $params = [$params]; // Normalize to array
+}
 
 $prefix = 'ddn/';
 $allowed_routes = [
@@ -25,7 +43,7 @@ $allowed_routes = [
         'level' => 8,
         'permissions' => ["admin_absensi"],
         'not_permissions' => ["no_absensi"],
-        'username' => $_GET['0'] ?? null
+        'username' => $params[0]
     ],
     
 ];
