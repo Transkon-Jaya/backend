@@ -51,7 +51,7 @@ $allowed_routes = [
     $prefix.'absensi_leaderboard_hi_desc' => [
         'query' => 'CALL absensi_leaderboard_hi_desc(?, ?, ?, ?)', //start_date, end_date, placement, department
         'params' => 4,
-        'level' => 8,
+        'level' => 0,
         'permissions' => ['admin_absensi'],
     ],
     $prefix.'absensi_leaderboard_ho_desc' => [
