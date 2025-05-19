@@ -63,7 +63,7 @@ if (isset($allowed_routes[$request])) {
 
     authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
 
-    if (count($params) != $route['params']) {
+    if (count($params) != $config['params']) {
         http_response_code(400);
         echo json_encode([
             'status' => 400,
@@ -71,7 +71,7 @@ if (isset($allowed_routes[$request])) {
         ]);
         exit();
     }
-    
+
     // Prepare the query
     $stmt = $conn->prepare($config["query"]);
     if (!$stmt) {
