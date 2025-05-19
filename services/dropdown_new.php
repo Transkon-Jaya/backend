@@ -27,7 +27,7 @@ if (!is_array($params)) {
     $params = [$params]; // Normalize to array
 }
 
-$prefix = 'dropdowns/';
+$prefix = 'ddn/';
 $allowed_routes = [
     $prefix.'customer' => [
         'query' => "SELECT DISTINCT name FROM customer",
