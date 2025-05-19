@@ -8,28 +8,32 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 // Require DB connection
 require_once __DIR__ . '/../db.php';
 
+$prefix = 'ddn/';
 $allowed_routes = [
-    'dropdowns/customer'     => 'SELECT DISTINCT name FROM customer',
-    'dropdowns/name'         => 'SELECT DISTINCT name FROM user_profiles',
-    'dropdowns/department'   => 'SELECT DISTINCT department FROM user_profiles',
-    'dropdowns/alt_location'  => 'SELECT DISTINCT alt_location FROM down_equipment',
-    'dropdowns/position'     => 'SELECT DISTINCT jabatan FROM user_profiles',
-    'dropdowns/tk_no'        => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
-    'dropdowns/tk_no_spare'  => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
-    'dropdowns/vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
-    'dropdowns/op_svc_category' => 'SELECT category FROM op_svc_category ORDER BY priority',
-    'dropdowns/op_svc_category_engine' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Engine'",
-    'dropdowns/op_svc_category_driveTrain' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Drive Train'",
-    'dropdowns/op_svc_category_chasis' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Chasis'",
-    'dropdowns/op_svc_category_electricalBody' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Electrical Body'",
-    'dropdowns/op_svc_category_acSystem' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System'",
-    'dropdowns/op_svc_category_repairElectrical' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Repair Electrical'",
-    'dropdowns/op_svc_category_defact' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Defact'",
-    'dropdowns/op_svc_category_body' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Body'"
+    'customer'     => 'SELECT DISTINCT name FROM customer',
+    'name'         => 'SELECT DISTINCT name FROM user_profiles',
+    'department'   => 'SELECT DISTINCT department FROM user_profiles',
+    'alt_location'  => 'SELECT DISTINCT alt_location FROM down_equipment',
+    'position'     => 'SELECT DISTINCT jabatan FROM user_profiles',
+    'tk_no'        => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
+    'tk_no_spare'  => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
+    'vehicle_type' => 'SELECT DISTINCT vehicle_type FROM down_equipment',
+    'op_svc_category' => 'SELECT category FROM op_svc_category ORDER BY priority',
+    'op_svc_category_engine' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Engine'",
+    'op_svc_category_driveTrain' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Drive Train'",
+    'op_svc_category_chasis' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Chasis'",
+    'op_svc_category_electricalBody' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Electrical Body'",
+    'op_svc_category_acSystem' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System'",
+    'op_svc_category_repairElectrical' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Repair Electrical'",
+    'op_svc_category_defact' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Defact'",
+    'op_svc_category_body' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Body'"
 ];
 
 // Get the requested route
 $request = $_GET['request'] ?? '';
+if (str_starts_with($request, $prefix)) {
+    $request = substr($request, strlen($prefix));
+}
 
 if (isset($allowed_routes[$request])) {
     $query = $allowed_routes[$request];
