@@ -27,7 +27,7 @@ if (!is_array($params)) {
     $params = [$params]; // Normalize to array
 }
 
-$prefix = 'ddn/';
+$prefix = 'dropdowns/';
 $allowed_routes = [
     $prefix.'customer' => [
         'query' => "SELECT DISTINCT name FROM customer",
@@ -42,48 +42,49 @@ $allowed_routes = [
         'query' => "SELECT DISTINCT alt_location FROM down_equipment",
     ],
     $prefix.'position' => [
-        'query' => "",
+        'query' => "SELECT DISTINCT jabatan FROM user_profiles",
     ],
     $prefix.'tk_no' => [
-        'query' => "",
+        'query' => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
     ],
     $prefix.'tk_no_spare' => [
-        'query' => "",
+        'query' => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds WHERE ds.done = 0 AND ds.deleted = 0)",
     ],
     $prefix.'vehicle_type' => [
-        'query' => "",
+        'query' => "SELECT DISTINCT vehicle_type FROM down_equipment",
     ],
     $prefix.'op_svc_category' => [
-        'query' => "",
+        'query' => "SELECT category FROM op_svc_category ORDER BY priority",
     ],
     $prefix.'op_svc_category_engine' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Engine'",
     ],
     $prefix.'op_svc_category_driveTrain' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Drive Train'",
     ],
     $prefix.'op_svc_category_chasis' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Chasis'",
     ],
     $prefix.'op_svc_category_electricalBody' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Electrical Body'",
     ],
     $prefix.'op_svc_category_acSystem' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'AC System",
     ],
     $prefix.'op_svc_category_repairElectrical' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Repair Electrical'",
     ],
     $prefix.'op_svc_category_defact' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Defact'",
     ],
     $prefix.'op_svc_category_body' => [
-        'query' => "",
+        'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Body'",
     ],
 ];
 
 $default_config = [
     'params' => 0,
+    'auth' => true,
     'level' => 9,
     'permissions' => [],
     'not_permissions' => [],
@@ -96,8 +97,10 @@ $request = $_GET['request'] ?? '';
 if (isset($allowed_routes[$request])) {
     $config = array_merge($default_config, $allowed_routes[$request]);
 
-    authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
-
+    if($config["auth"]){
+        authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
+    }
+    
     if (count($params) != $config['params']) {
         http_response_code(400);
         echo json_encode([
