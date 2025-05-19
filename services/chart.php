@@ -48,16 +48,16 @@ $allowed_routes = [
         'query' => 'CALL absensi_avg_hio(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
         'params' => 5
     ],
-    $prefix.'absensi_leaderboard_hi' => [
-        'query' => 'CALL absensi_leaderboard_hi(?, ?, ?, ?)', //start_date, end_date, placement, department
+    $prefix.'absensi_leaderboard_hi_desc' => [
+        'query' => 'CALL absensi_leaderboard_hi_desc(?, ?, ?, ?)', //start_date, end_date, placement, department
         'params' => 4
     ],
-    $prefix.'absensi_leaderboard_ho' => [
-        'query' => 'CALL absensi_leaderboard_ho(?, ?, ?, ?)', //start_date, end_date, placement, department
+    $prefix.'absensi_leaderboard_ho_desc' => [
+        'query' => 'CALL absensi_leaderboard_ho_desc(?, ?, ?, ?)', //start_date, end_date, placement, department
         'params' => 4
     ],
-    $prefix.'absensi_leaderboard_hw' => [
-        'query' => 'CALL absensi_leaderboard_hw(?, ?, ?, ?)', //start_date, end_date, placement, department
+    $prefix.'absensi_leaderboard_hw_desc' => [
+        'query' => 'CALL absensi_leaderboard_hw_desc(?, ?, ?, ?)', //start_date, end_date, placement, department
         'params' => 4
     ],
     //--ABSENSI END--//
