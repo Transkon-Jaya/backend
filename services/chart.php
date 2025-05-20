@@ -48,6 +48,12 @@ $allowed_routes = [
         'query' => 'CALL absensi_avg_hio(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
         'params' => 5
     ],
+    $prefix.'absensi_leaderboard_hi_asc' => [
+        'query' => 'CALL absensi_leaderboard_hi_asc(?, ?, ?, ?, ?)', //start_date, end_date, department, location, placement
+        'params' => 5,
+        'level' => 8,
+        'permissions' => ['admin_absensi'],
+    ],
     $prefix.'absensi_leaderboard_hi_desc' => [
         'query' => 'CALL absensi_leaderboard_hi_desc(?, ?, ?, ?, ?)', //start_date, end_date, department, location, placement
         'params' => 5,
