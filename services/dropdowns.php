@@ -29,29 +29,20 @@ if (!is_array($params)) {
 
 $prefix = 'dropdowns/';
 $allowed_routes = [
+    $prefix.'alt_location' => [
+        'query' => "SELECT DISTINCT alt_location FROM down_equipment",
+    ],
     $prefix.'customer' => [
         'query' => "SELECT DISTINCT name FROM customer",
-    ],
-    $prefix.'name' => [
-        'query' => 'SELECT DISTINCT name FROM user_profiles',
     ],
     $prefix.'department' => [
         'query' => "SELECT DISTINCT department FROM user_profiles",
     ],
-    $prefix.'alt_location' => [
-        'query' => "SELECT DISTINCT alt_location FROM down_equipment",
+    $prefix.'location' => [
+        'query' => "SELECT DISTINCT nama FROM hr_location ORDER BY nama",
     ],
-    $prefix.'position' => [
-        'query' => "SELECT DISTINCT jabatan FROM user_profiles",
-    ],
-    $prefix.'tk_no' => [
-        'query' => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
-    ],
-    $prefix.'tk_no_spare' => [
-        'query' => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds WHERE ds.done = 0 AND ds.deleted = 0)",
-    ],
-    $prefix.'vehicle_type' => [
-        'query' => "SELECT DISTINCT vehicle_type FROM down_equipment",
+    $prefix.'name' => [
+        'query' => 'SELECT DISTINCT name FROM user_profiles',
     ],
     $prefix.'op_svc_category' => [
         'query' => "SELECT category FROM op_svc_category ORDER BY priority",
@@ -79,6 +70,18 @@ $allowed_routes = [
     ],
     $prefix.'op_svc_category_body' => [
         'query' => "SELECT problem FROM op_svc_category_problem WHERE category = 'Body'",
+    ],
+    $prefix.'position' => [
+        'query' => "SELECT DISTINCT jabatan FROM user_profiles",
+    ],
+    $prefix.'tk_no' => [
+        'query' => "SELECT DISTINCT tk_no FROM down_equipment WHERE status_unit_3 = 'Rental' AND tk_no NOT IN (SELECT ds.tk_no FROM de_site ds)",
+    ],
+    $prefix.'tk_no_spare' => [
+        'query' => "SELECT DISTINCT tk_no FROM down_equipment WHERE tk_no NOT IN (SELECT ds.tk_no FROM de_site ds WHERE ds.done = 0 AND ds.deleted = 0)",
+    ],
+    $prefix.'vehicle_type' => [
+        'query' => "SELECT DISTINCT vehicle_type FROM down_equipment",
     ],
 ];
 
