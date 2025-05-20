@@ -2,87 +2,67 @@
 header("Content-Type: application/json");
 require 'db.php';
 
-require 'auth.php';
-
 $method = $_SERVER['REQUEST_METHOD'];
 
-$user = verifyToken();
-
 switch ($method) {
-    case 'GET': // Fetch users
-        $sql = "CALL customer_get_all()";
-        $result = $conn->query($sql);
+    case 'GET': // Fetch user profiles
+        $username = isset($_GET['username']) ? $_GET['username'] : '';
 
-        if (!$result) {
+        if (!empty($username)) {
+            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
+                                    FROM user_profiles 
+                                    WHERE username LIKE CONCAT(?, '%')
+                                    ORDER BY username ASC");
+            $stmt->bind_param("s", $username);
+        } else {
+            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
+                                    FROM user_profiles 
+                                    ORDER BY username ASC");
+        }
+
+        if (!$stmt->execute()) {
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $conn->error]);
+            echo json_encode(["status" => 500, "error" => $stmt->error]);
             break;
         }
 
-        $customers = [];
+        $result = $stmt->get_result();
+        $users = [];
         while ($row = $result->fetch_assoc()) {
-            $customers[] = $row;
+            $users[] = $row;
         }
-        echo json_encode($customers);
+
+        echo json_encode($users);
         break;
 
-    case 'POST': // Insert new users
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!isset($data['name'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Missing required fields"]);
-            break;
-        }
-
-        $name = $conn->real_escape_string($data['name']);
-        $sql = "CALL customer_insert('$name')";
-        $conn->query($sql);
-        if ($conn->errno == 0) {
-            $logMesssage .= "error isnt called\n";
-            echo json_encode(["status" => 200, "message" => "Customer added successfully"]);
-        } else {
-            http_response_code(409);
-            echo json_encode(["status" => 409, "error" => $conn->error]);
-        }
+    case 'POST': // Insert new user (optional)
+        http_response_code(501);
+        echo json_encode(["status" => 501, "error" => "Not implemented"]);
         break;
 
-    case 'PUT': // Update users
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!isset($data['oldname']) || !isset($data['newname'])) {
-        http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Missing required fields"]);
-            break;
-        }
+    case 'PUT':
+    parse_str(file_get_contents("php://input"), $_PUT);
+    $username = $_PUT['username'];
+    $name = $_PUT['name'];
+    $department = $_PUT['department'];
+    $placement = $_PUT['placement'];
+    $gender = $_PUT['gender'];
+    $lokasi = $_PUT['lokasi'];
 
-        $oldname = $conn->real_escape_string($data['oldname']);
-        $newname = $conn->real_escape_string($data['newname']);
-        $sql = "CALL customer_update('$oldname', '$newname')";
+    $stmt = $conn->prepare("UPDATE user_profiles SET name=?, department=?, placement=?, gender=?, lokasi=? WHERE username=?");
+    $stmt->bind_param("ssssss", $name, $department, $placement, $gender, $lokasi, $username);
 
-        if ($conn->query($sql)) {
-            echo json_encode(["status" => 200, "message" => "Customer updated successfully"]);
-        } else {
-            http_response_code(409);
-            echo json_encode(["status" => 409, "error" => $conn->error]);
-        }
-        break;
+    if ($stmt->execute()) {
+        echo json_encode(["status" => 200, "message" => "Updated"]);
+    } else {
+        http_response_code(500);
+        echo json_encode(["status" => 500, "error" => $stmt->error]);
+    }
+    break;
 
-    case 'DELETE': // Delete users
-        $data = json_decode(file_get_contents("php://input"), true);
-        if (!isset($data['name'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Missing required fields"]);
-            break;
-        }
-
-        $name = $conn->real_escape_string($data['name']);
-        $sql = "CALL customer_delete('$name')";
-
-        if ($conn->query($sql)) {
-            echo json_encode(["status" => 200, "message" => "Customer deleted successfully"]);
-        } else {
-            http_response_code(409);
-            echo json_encode(["status" => 409, "error" => $conn->error]);
-        }
+    case 'DELETE': // Delete user (optional)
+        http_response_code(501);
+        echo json_encode(["status" => 501, "error" => "Not implemented"]);
         break;
 
     default:
@@ -93,4 +73,3 @@ switch ($method) {
 
 $conn->close();
 ?>
-
