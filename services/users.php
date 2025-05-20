@@ -6,34 +6,34 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET': // Fetch user profiles
-    $username = isset($_GET['username']) ? $_GET['username'] : '';
+        $username = isset($_GET['username']) ? $_GET['username'] : '';
 
-    // Jika parameter diberikan, filter berdasarkan username
-    if (!empty($username)) {
-        $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
-                                FROM user_profiles 
-                                WHERE username LIKE CONCAT(?, '%')");
-        $stmt->bind_param("s", $username);
-    } else {
-        // Jika tidak ada filter
-        $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
-                                FROM user_profiles");
-    }
+        if (!empty($username)) {
+            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
+                                    FROM user_profiles 
+                                    WHERE username LIKE CONCAT(?, '%')
+                                    ORDER BY username ASC");
+            $stmt->bind_param("s", $username);
+        } else {
+            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
+                                    FROM user_profiles 
+                                    ORDER BY username ASC");
+        }
 
-    if (!$stmt->execute()) {
-        http_response_code(500);
-        echo json_encode(["status" => 500, "error" => $stmt->error]);
+        if (!$stmt->execute()) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => $stmt->error]);
+            break;
+        }
+
+        $result = $stmt->get_result();
+        $users = [];
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+
+        echo json_encode($users);
         break;
-    }
-
-    $result = $stmt->get_result();
-    $users = [];
-    while ($row = $result->fetch_assoc()) {
-        $users[] = $row;
-    }
-
-    echo json_encode($users);
-    break;
 
     case 'POST': // Insert new user (optional)
         http_response_code(501);
