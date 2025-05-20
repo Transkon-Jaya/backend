@@ -6,7 +6,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET': // Fetch customers
-        $sql = "SELECT * FROM hr_lokasi";
+        $sql = "SELECT * FROM hr_location";
         $result = $conn->query($sql);
 
         if (!$result) {
