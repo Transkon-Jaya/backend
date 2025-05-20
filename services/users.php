@@ -42,7 +42,6 @@ switch ($method) {
 
     case 'PUT':
     parse_str(file_get_contents("php://input"), $_PUT);
-    $username = $_PUT['username'];
     $name = $_PUT['name'];
     $department = $_PUT['department'];
     $placement = $_PUT['placement'];
