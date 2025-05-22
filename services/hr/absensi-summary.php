@@ -37,7 +37,7 @@ switch ($method) {
                 agg.total_telat AS Telat,
                 CASE 
                     WHEN agg.total_hadir = 0 THEN 0
-                    ELSE (agg.total_telat / agg.total_hadir) * 100
+                    ELSE ROUND((agg.total_telat / agg.total_hadir) * 100, 2)
                 END AS `Telat(%)`,
                 CASE 
                     WHEN agg.total_hadir = 0 THEN ''
@@ -45,12 +45,22 @@ switch ($method) {
                     WHEN (agg.total_telat / agg.total_hadir) * 100 > 10 THEN 'Coaching'
                     ELSE ''
                 END AS Action
+                agg.count_ovt AS Overhour,
+                CASE 
+                    WHEN agg.total_hadir = 0 THEN 0
+                    ELSE ROUND((agg.count_ovt / agg.total_hadir) * 100, 2)
+                END AS `Overhour(%)`,
+                agg.total_ovt_hour AS `Overhour(H)`,
+                agg.total_ovt AS `Tot Overhour`
             FROM user_profiles u
             LEFT JOIN (
                 SELECT 
                     a.username,
                     COUNT(DISTINCT a.tanggal) AS total_hadir,
-                    SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS total_telat
+                    SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS total_telat,
+                    SUM(CASE WHEN a.ovt > 0 THEN 1 ELSE 0 END) AS count_ovt,
+                    SUM(a.ovt) AS total_ovt_hour,
+                    SUM(a.total) AS total_ovt
                 FROM hr_absensi a
                 WHERE MONTH(a.tanggal) = $month AND YEAR(a.tanggal) = $year
                 GROUP BY a.username
