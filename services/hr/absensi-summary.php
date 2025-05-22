@@ -19,8 +19,8 @@ switch ($method) {
         $presentSumParts = [];
 
         for ($day = 1; $day <= $daysInMonth; $day++) {
-            $col = "MAX(CASE WHEN DAY(a.tanggal) = $day THEN 1 ELSE 0 END)";
-            $dayColumns[] = "$col AS `day_$day`";
+            $col = "MAX(CASE WHEN DAY(a.tanggal) = $day THEN 1 ELSE NULL END)";
+            $dayColumns[] = "$col AS `$day`";
             $presentSumParts[] = $col;
         }
 
@@ -33,7 +33,7 @@ switch ($method) {
                 u.name,
                 u.department,
                 $dayColumnsSql,
-                ($presentSumSql) AS total_days_present
+                ($presentSumSql) AS `Tot Hadir`
             FROM user_profiles u
             LEFT JOIN hr_absensi a 
                 ON u.username = a.username
