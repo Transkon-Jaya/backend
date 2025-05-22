@@ -9,7 +9,7 @@ switch ($method) {
         $username = isset($_GET['username']) ? $_GET['username'] : '';
 
         if (!empty($username)) {
-            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan,email, phone, gaji_pokok
+            $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan,email, phone, gaji_pokok
                                     FROM user_profiles 
                                     WHERE username LIKE CONCAT(?, '%')
                                     ORDER BY username ASC");
