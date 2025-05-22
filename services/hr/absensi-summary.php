@@ -8,7 +8,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
     case 'GET':
         $username = $_GET['username'] ?? null;
-        authorize(2, ['admin_absensi'], [], $username);
+        authorize(8, ['admin_absensi'], [], $username);
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $dayColumns = [];
