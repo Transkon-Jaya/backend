@@ -33,7 +33,7 @@ switch ($method) {
                 u.name,
                 u.department,
                 $dayColumnsSql,
-                ($presentSumSql) AS `Tot Hadir`
+                COUNT(DISTINCT a.tanggal) AS `Tot Hadir`
             FROM user_profiles u
             LEFT JOIN hr_absensi a 
                 ON u.username = a.username
