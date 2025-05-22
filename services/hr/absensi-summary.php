@@ -44,7 +44,7 @@ switch ($method) {
                     WHEN (agg.total_telat / agg.total_hadir) * 100 >= 70 THEN 'SP1'
                     WHEN (agg.total_telat / agg.total_hadir) * 100 > 10 THEN 'Coaching'
                     ELSE ''
-                END AS Action
+                END AS Action,
                 agg.count_ovt AS Overhour,
                 CASE 
                     WHEN agg.total_hadir = 0 THEN 0
