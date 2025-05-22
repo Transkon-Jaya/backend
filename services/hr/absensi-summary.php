@@ -34,7 +34,10 @@ switch ($method) {
                 u.department,
                 $dayColumnsSql,
                 COUNT(DISTINCT a.tanggal) AS `Tot Hadir`,
-                SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS Telat
+                SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS Telat,
+                CASE WHEN COUNT(DISTINCT a.tanggal) = 0 THEN 0
+                    ELSE ROUND((SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) / COUNT(DISTINCT a.tanggal)) * 100, 2)
+                END AS `Telat(%)`
             FROM user_profiles u
             LEFT JOIN hr_absensi a 
                 ON u.username = a.username
