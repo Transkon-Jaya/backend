@@ -62,7 +62,7 @@ switch ($method) {
         $stmt = $conn->prepare("INSERT INTO user_profiles 
                                (username, name, department, placement, gender, lokasi,site)              
                                VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssss", 
+        $stmt->bind_param("sssssss", 
             $data['username'],
             $data['name'],
             $data['department'],
