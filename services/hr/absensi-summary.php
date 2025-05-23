@@ -9,9 +9,9 @@ switch ($method) {
     case 'GET':
         $username = $_GET['username'] ?? null;
         authorize(8, ['admin_absensi'], [], $username);
-        // Optional: get month/year from query string
-        $month = $_GET['month'] ?? 5;
-        $year = $_GET['year'] ?? 2025;
+        
+        $month = $_GET['month'] ?? date('n');
+        $year = $_GET['year'] ?? date('Y');
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
