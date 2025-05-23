@@ -76,7 +76,7 @@ switch ($method) {
                 AND YEAR(a.tanggal) = $year
             WHERE u.username like 'tj%'
             GROUP BY u.username, u.name, u.department
-            ORDER BY u.name
+            ORDER BY u.username
         ";
 
         $result = $conn->query($sql);
