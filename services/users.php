@@ -45,8 +45,11 @@ switch ($method) {
             break;
         }
 
+        $stmt = $conn->prepare("INSERT INTO users
+                               (username, passwd, user_level) 
+                               VALUES (?, $2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC, 9)");
         $stmt = $conn->prepare("INSERT INTO user_profiles 
-                               (username, name, department, placement, gender, lokasi) 
+                               (username, name, department, placement, gender, lokasi)              
                                VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("ssssss", 
             $data['username'],
