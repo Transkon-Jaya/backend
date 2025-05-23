@@ -63,7 +63,7 @@ switch ($method) {
                     SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS total_telat,
                     SUM(CASE WHEN a.ovt > 0 THEN 1 ELSE 0 END) AS count_ovt,
                     SUM(a.ovt) AS total_ovt_hour,
-                    SUM(a.total) AS total_ovt
+                    SUM(a.total) AS total_ovt,
                     TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_in)))), '%H:%i:%s') AS avg_hour_in,
                     TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
                     ROUND(AVG(a.hour_worked), 2) as avg_hour_worked
