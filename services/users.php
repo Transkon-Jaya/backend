@@ -44,12 +44,16 @@ switch ($method) {
             echo json_encode(["status" => 400, "error" => "Username and name are required"]);
             break;
         }
+        $password = password_hash("password", PASSWORD_BCRYPT); // Or use one from input
+        $user_level = 9;
 
         $stmt = $conn->prepare("INSERT INTO users
                                (username, passwd, user_level) 
-                               VALUES (?, `$2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC`, 9)");
-        $stmt->bind_param("s", 
-            $data['username']
+                               VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", 
+            $data['username'],
+            $password,
+            $user_level
         );
         if (!$stmt->execute()) {
             http_response_code(500);
