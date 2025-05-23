@@ -50,7 +50,7 @@ switch ($method) {
                                VALUES (?, $2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC, 9)");
         $stmt = $conn->prepare("INSERT INTO user_profiles 
                                (username, name, department, placement, gender, lokasi,site)              
-                               VALUES (?, ?, ?, ?, ?, ?, ?)");
+                               VALUES (?, ?, ?, ?, ?, ?, HO BALIKPAPAN)");
         $stmt->bind_param("ssssss", 
             $data['username'],
             $data['name'],
