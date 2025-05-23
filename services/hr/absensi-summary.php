@@ -29,11 +29,22 @@ switch ($method) {
 
         $sql = "
             SELECT 
-                u.username,
+                u.username AS NIK,
                 u.name,
                 u.department,
+                u.lokasi,
+                u.jabatan,
+                NULL AS Kepeg,
                 $dayColumnsSql,
                 agg.total_hadir AS `Tot Hadir`,
+                NULL AS PD,
+                NULL AS `Adj PD`,
+                NULL AS OFF,
+                NULL AS Absen,
+                NULL AS Izin,
+                NULL AS Sakit,
+                NULL AS `Cuti Lokasi`,
+                NULL AS `Cuti Tahunan`,
                 agg.total_telat AS Telat,
                 CASE 
                     WHEN agg.total_hadir = 0 THEN 0
