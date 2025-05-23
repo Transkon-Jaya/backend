@@ -48,6 +48,13 @@ switch ($method) {
         $stmt = $conn->prepare("INSERT INTO users
                                (username, passwd, user_level) 
                                VALUES (?, $2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC, 9)");
+        $stmt->bind_param("s", 
+            $data['username']
+        );
+        if (!$stmt->execute()) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => $stmt->error]);
+        }
         $stmt = $conn->prepare("INSERT INTO user_profiles 
                                (username, name, department, placement, gender, lokasi,site)              
                                VALUES (?, ?, ?, ?, ?, ?, HO BALIKPAPAN)");
