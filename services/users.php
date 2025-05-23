@@ -9,13 +9,13 @@ switch ($method) {
         $username = isset($_GET['username']) ? $_GET['username'] : '';
 
         if (!empty($username)) {
-            $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan,email, phone, gaji_pokok
+            $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan,email, phone, gaji_pokok,site
                                     FROM user_profiles 
                                     WHERE username LIKE CONCAT(?, '%')
                                     ORDER BY username ASC");
             $stmt->bind_param("s", $username);
         } else {
-            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi 
+            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi,site 
                                     FROM user_profiles 
                                     ORDER BY username ASC");
         }
@@ -49,15 +49,16 @@ switch ($method) {
                                (username, passwd, user_level) 
                                VALUES (?, $2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC, 9)");
         $stmt = $conn->prepare("INSERT INTO user_profiles 
-                               (username, name, department, placement, gender, lokasi)              
-                               VALUES (?, ?, ?, ?, ?, ?)");
+                               (username, name, department, placement, gender, lokasi,site)              
+                               VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("ssssss", 
             $data['username'],
             $data['name'],
             $data['department'],
             $data['placement'],
             $data['gender'],
-            $data['lokasi']
+            $data['lokasi'],
+            $data['site']
         );
 
         if ($stmt->execute()) {
