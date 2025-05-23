@@ -47,7 +47,7 @@ switch ($method) {
 
         $stmt = $conn->prepare("INSERT INTO users
                                (username, passwd, user_level) 
-                               VALUES (?, $2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC, 9)");
+                               VALUES (?, `$2y$10$b3ERgZ7Yw3q3EO/QiYDsnetnslJsQg0pg.eXw1LGQKYPiHQAz3EcC`, 9)");
         $stmt->bind_param("s", 
             $data['username']
         );
