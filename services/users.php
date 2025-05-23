@@ -35,39 +35,84 @@ switch ($method) {
         echo json_encode($users);
         break;
 
-    case 'POST': // Insert new user (optional)
-        http_response_code(501);
-        echo json_encode(["status" => 501, "error" => "Not implemented"]);
+    case 'POST': // Insert new user
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        // Validasi data
+        if (empty($data['username']) || empty($data['name'])) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Username and name are required"]);
+            break;
+        }
+
+        $stmt = $conn->prepare("INSERT INTO user_profiles 
+                               (username, name, department, placement, gender, lokasi) 
+                               VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssssss", 
+            $data['username'],
+            $data['name'],
+            $data['department'],
+            $data['placement'],
+            $data['gender'],
+            $data['lokasi']
+        );
+
+        if ($stmt->execute()) {
+            http_response_code(201);
+            echo json_encode(["status" => 201, "message" => "User created successfully"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => $stmt->error]);
+        }
         break;
 
     case 'PUT':
-    parse_str(file_get_contents("php://input"), $_PUT);
-    $username = $_PUT['username'];
-    $name = $_PUT['name'];
-    $department = $_PUT['department'];
-    $placement = $_PUT['placement'];
-    $gender = $_PUT['gender'];
-    $lokasi = $_PUT['lokasi'];
+        $data = json_decode(file_get_contents('php://input'), true);
+        $username = $data['username'];
+        
+        $stmt = $conn->prepare("UPDATE user_profiles SET 
+                               name=?, department=?, placement=?, gender=?, lokasi=? 
+                               WHERE username=?");
+        $stmt->bind_param("ssssss", 
+            $data['name'],
+            $data['department'],
+            $data['placement'],
+            $data['gender'],
+            $data['lokasi'],
+            $username
+        );
 
-    $stmt = $conn->prepare("UPDATE user_profiles SET name=?, department=?, placement=?, gender=?, lokasi=? WHERE username=?");
-    $stmt->bind_param("ssssss", $name, $department, $placement, $gender, $lokasi, $username);
+        if ($stmt->execute()) {
+            echo json_encode(["status" => 200, "message" => "Updated successfully"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => $stmt->error]);
+        }
+        break;
 
-    if ($stmt->execute()) {
-        echo json_encode(["status" => 200, "message" => "Updated"]);
-    } else {
-        http_response_code(500);
-        echo json_encode(["status" => 500, "error" => $stmt->error]);
-    }
-    break;
+    case 'DELETE':
+        $username = $_GET['username'] ?? '';
+        
+        if (empty($username)) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Username is required"]);
+            break;
+        }
 
-    case 'DELETE': // Delete user (optional)
-        http_response_code(501);
-        echo json_encode(["status" => 501, "error" => "Not implemented"]);
+        $stmt = $conn->prepare("DELETE FROM user_profiles WHERE username = ?");
+        $stmt->bind_param("s", $username);
+
+        if ($stmt->execute()) {
+            echo json_encode(["status" => 200, "message" => "User deleted successfully"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => $stmt->error]);
+        }
         break;
 
     default:
         http_response_code(405);
-        echo json_encode(["status" => 405, "error" => "Invalid request method"]);
+        echo json_encode(["status" => 405, "error" => "Method not allowed"]);
         break;
 }
 
