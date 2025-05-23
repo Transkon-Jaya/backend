@@ -51,7 +51,10 @@ switch ($method) {
                     ELSE ROUND((agg.count_ovt / agg.total_hadir) * 100, 2)
                 END AS `Overhour(%)`,
                 agg.total_ovt_hour AS `Overhour(H)`,
-                agg.total_ovt AS `Tot Overhour`
+                agg.total_ovt AS `Tot Overhour`,
+                agg.avg_hour_in AS 'AVG HOUR IN',
+                agg.avg_hour_out AS 'AVG HOUR OUT',
+                agg.avg_hour_worked AS 'AVG HOUR WORKED'
             FROM user_profiles u
             LEFT JOIN (
                 SELECT 
@@ -61,6 +64,9 @@ switch ($method) {
                     SUM(CASE WHEN a.ovt > 0 THEN 1 ELSE 0 END) AS count_ovt,
                     SUM(a.ovt) AS total_ovt_hour,
                     SUM(a.total) AS total_ovt
+                    TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_in)))), '%H:%i:%s') AS avg_hour_in,
+                    TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
+                    ROUND(AVG(a.hour_worked), 2) as avg_hour_worked
                 FROM hr_absensi a
                 WHERE MONTH(a.tanggal) = $month AND YEAR(a.tanggal) = $year
                 GROUP BY a.username
