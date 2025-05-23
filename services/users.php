@@ -44,7 +44,7 @@ switch ($method) {
             echo json_encode(["status" => 400, "error" => "Username and name are required"]);
             break;
         }
-        $password = password_hash("password", PASSWORD_BCRYPT); // Or use one from input
+        $password = password_hash("password", PASSWORD_BCRYPT);
         $user_level = 9;
 
         $stmt = $conn->prepare("INSERT INTO users
@@ -68,8 +68,8 @@ switch ($method) {
             $data['department'],
             $data['placement'],
             $data['gender'],
-            $data['lokasi'],
-            $data['site']
+            $data['lokasi']
+            // $data['site']
         );
 
         if ($stmt->execute()) {
