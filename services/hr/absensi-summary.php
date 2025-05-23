@@ -74,6 +74,7 @@ switch ($method) {
                 ON u.username = a.username
                 AND MONTH(a.tanggal) = $month 
                 AND YEAR(a.tanggal) = $year
+            WHERE u.username like 'tj%'
             GROUP BY u.username, u.name, u.department
             ORDER BY u.name
         ";
