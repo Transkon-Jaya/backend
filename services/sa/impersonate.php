@@ -1,32 +1,34 @@
 <?php
-// Handle preflight request (CORS)
-if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
+
+// Handle CORS preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
-    exit();
+    exit;
 }
 
-require 'vendor/autoload.php';
-use Firebase\JWT\JWT;
-use Dotenv\Dotenv;
-
-require_once __DIR__ . '/../db.php';
-require_once 'auth.php';
-
-authorize(0, [], [], null);
-
+// Reject non-POST methods
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(["status" => 405, "error" => "Method Not Allowed"]);
     exit;
 }
 
-// Load .env variables
+require 'vendor/autoload.php';
+use Firebase\JWT\JWT;
+use Dotenv\Dotenv;
+
+require_once 'db.php';
+require_once 'auth.php';
+
+// Require level 0 user to access impersonation
+authorize(0, [], [], null);
+
+// Load environment variables
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
+$secret_key = $_ENV['JWT_SECRET'] ?? 'fallback-secret-key';
 
-$secret_key = $_ENV['JWT_SECRET'] ?? "fallback-secret-key";
-
-// Read JSON input
+// Parse request body
 $data = json_decode(file_get_contents("php://input"), true);
 $username = $data['username'] ?? '';
 
@@ -36,30 +38,27 @@ if (empty($username)) {
     exit;
 }
 
-// Get user info
+// Fetch user data
 $sql = "CALL user_login(?)";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
 
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-} else {
+if (!$user) {
     http_response_code(404);
     echo json_encode(["status" => 404, "error" => "User not found"]);
     exit;
 }
 
-$stmt->close();
-
-// Get user permissions
+// Fetch permissions
 $sql = "CALL user_get_permissions(?)";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
-
 $permissions = [];
 while ($row = $result->fetch_assoc()) {
     $permissions[] = $row['permission'];
@@ -87,4 +86,3 @@ echo json_encode([
 ]);
 
 $conn->close();
-?>
