@@ -15,7 +15,7 @@ switch ($method) {
                                     ORDER BY username ASC");
             $stmt->bind_param("s", $username);
         } else {
-            $stmt = $conn->prepare("SELECT username, name, department, placement, gender, lokasi,site 
+            $stmt = $conn->prepare("SELECT username, name, department,jabatan, placement, gender, lokasi,site 
                                     FROM user_profiles 
                                     ORDER BY username ASC");
         }
@@ -60,12 +60,13 @@ switch ($method) {
             echo json_encode(["status" => 500, "error" => $stmt->error]);
         }
         $stmt = $conn->prepare("INSERT INTO user_profiles 
-                               (username, name, department, placement, gender, lokasi,site)              
-                               VALUES (?, ?, ?, ?, ?, ?, ?)");
+                               (username, name, department,jabatan, placement, gender, lokasi,site)              
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sssssss", 
             $data['username'],
             $data['name'],
             $data['department'],
+            $data['jabatan'],
             $data['placement'],
             $data['gender'],
             $data['lokasi'],
@@ -86,11 +87,12 @@ switch ($method) {
         $username = $data['username'];
         
         $stmt = $conn->prepare("UPDATE user_profiles SET 
-                               name=?, department=?, placement=?, gender=?, lokasi=? 
+                               name=?, department=?,jabatan=?, placement=?, gender=?, lokasi=? 
                                WHERE username=?");
         $stmt->bind_param("ssssss", 
             $data['name'],
             $data['department'],
+            $data['jabatan'],
             $data['placement'],
             $data['gender'],
             $data['lokasi'],
