@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 $allowed_routes = [
     'ip'             => 'services/ip.php',
     'sa/impersonate' => 'services/sa/impersonate.php',
+    'tools/memo'     => 'services/tools/memo.php',
     'test'           => 'test.php',
     'login'          => 'login.php',
     'absensi'        => 'services/hr/absensi.php',
