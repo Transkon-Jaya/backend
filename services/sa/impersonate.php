@@ -24,7 +24,7 @@ require_once 'auth.php';
 authorize(0, [], [], null);
 
 // Load environment variables
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
 $dotenv->load();
 $secret_key = $_ENV['JWT_SECRET'] ?? 'fallback-secret-key';
 
