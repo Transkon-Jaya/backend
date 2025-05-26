@@ -60,7 +60,7 @@ switch ($method) {
             echo json_encode(["status" => 500, "error" => $stmt->error]);
         }
         $stmt = $conn->prepare("INSERT INTO user_profiles 
-                               (username, name, department,jabatan, placement, gender, lokasi,site)              
+                               (username, name, department,jabatan, placement, gender, lokasi, site)              
                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sssssss", 
             $data['username'],
