@@ -11,16 +11,7 @@ if (!is_dir($uploadDir)) {
 
 switch ($method) {
     case 'GET':
-        if (!isset($_GET['username'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "No Username!"]);
-            exit;
-        }
-        $username = $conn->real_escape_string($_GET['username']);
-
-        // Updated SQL: Include username in WHERE clause, no bind needed if not used
-        // Or fix to use prepared statement properly:
-        $sql = "SELECT * FROM memo WHERE username = ? ORDER BY createdAt DESC LIMIT 1";
+        $sql = "SELECT * FROM memo ORDER BY createdAt DESC LIMIT 1";
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
             http_response_code(500);
