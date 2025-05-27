@@ -12,8 +12,8 @@ $code = $_GET['code'];
 
 try {
     // Call the stored procedure
-    $stmt = $pdo->prepare("CALL short_link_get(:code)");
-    $stmt->bindParam(':code', $code, PDO::PARAM_STR);
+    $stmt = $pdo->prepare("CALL short_link_get(?)");
+    $stmt->bindParam('s', $code, PDO::PARAM_STR);
     $stmt->execute();
 
     // Fetch the original link
