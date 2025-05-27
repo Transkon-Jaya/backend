@@ -17,7 +17,7 @@ try {
     $stmt->execute();
 
     // Fetch the original link
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    $result = $stmt->fetch();
 
     if ($result && !empty($result['original_link'])) {
         header("Location: " . $result['original_link']);
