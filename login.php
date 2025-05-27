@@ -72,7 +72,7 @@ if ($user) {
         ];
         http_response_code(200);
         $jwt = JWT::encode($payload, $secret_key, 'HS256');
-        echo json_encode(["status" => 200, "token" => $jwt, "photo" => $photo, "user_level" => $user_level, "permissions" => $permissions]);
+        echo json_encode(["status" => 200, "token" => $jwt, "name" => $name, "photo" => $photo, "user_level" => $user_level, "permissions" => $permissions]);
     } else {
         http_response_code(401);
         echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
