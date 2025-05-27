@@ -47,6 +47,7 @@ $stmt->close();
 if ($user) {
     $user_level = $user["user_level"];
     $photo = $user["photo"];
+    $name = $user["name"];
     $sql = "CALL user_get_permissions(?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $username);
@@ -63,6 +64,7 @@ if ($user) {
         $expiration_time = $issued_at + (60 * 60 * 14); // Token expires in 14 hours
         $payload = [
             "username" => $username,
+            "name" => $name,
             "photo" => $photo,
             "user_level" => $user_level,
             "permissions" => $permissions,
