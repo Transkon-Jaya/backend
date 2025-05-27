@@ -1,55 +1,58 @@
 <?php
 require 'db.php'; // Should define $conn as MySQLi connection
 
+header('Content-Type: application/json');
+
 if (!isset($_GET['code']) || empty($_GET['code'])) {
     http_response_code(400);
-    exit('Missing short link code.');
+    echo json_encode(['error' => 'Missing short link code.']);
+    exit;
 }
 
 $code = $_GET['code'];
 
 try {
-    // Prepare the CALL statement
     $stmt = $conn->prepare("CALL short_link_get(?)");
     if (!$stmt) {
         http_response_code(500);
-        exit("Prepare failed: " . $conn->error);
+        echo json_encode(['error' => 'Prepare failed: ' . $conn->error]);
+        exit;
     }
 
     $stmt->bind_param("s", $code);
 
     if (!$stmt->execute()) {
         http_response_code(500);
-        exit("Execute failed: " . $stmt->error);
+        echo json_encode(['error' => 'Execute failed: ' . $stmt->error]);
+        exit;
     }
 
-    // Stored procedures with MySQLi require using get_result or bind_result
     $result = $stmt->get_result();
     if (!$result) {
-        // Some MySQLi setups don’t support get_result() with stored procedures
-        // In that case, use bind_result:
+        // fallback if get_result() unsupported
         $stmt->bind_result($original_link);
         if ($stmt->fetch()) {
-            header("Location: " . $original_link);
+            echo json_encode(['original_link' => $original_link]);
             exit;
         } else {
             http_response_code(404);
-            exit("Link not found or expired.");
+            echo json_encode(['error' => 'Link not found or expired.']);
+            exit;
         }
     } else {
-        // Using get_result()
         $row = $result->fetch_assoc();
         if ($row && !empty($row['original_link'])) {
-            header("Location: " . $row['original_link']);
+            echo json_encode(['original_link' => $row['original_link']]);
             exit;
         } else {
             http_response_code(404);
-            exit("Link not found or expired.");
+            echo json_encode(['error' => 'Link not found or expired.']);
+            exit;
         }
     }
 
     $stmt->close();
 } catch (Exception $e) {
     http_response_code(500);
-    exit("Server error.");
+    echo json_encode(['error' => 'Server error.']);
 }
