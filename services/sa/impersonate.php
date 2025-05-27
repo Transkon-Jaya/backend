@@ -70,6 +70,7 @@ $expiration_time = $issued_at + (60 * 60 * 14); // 14 hours
 
 $payload = [
     "username" => $username,
+    "name" => $user['name'],
     "photo" => $user['photo'],
     "user_level" => $user['user_level'],
     "permissions" => $permissions,
