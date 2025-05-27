@@ -12,7 +12,7 @@ $code = $_GET['code'];
 
 try {
     // Call the stored procedure
-    $stmt = $pdo->prepare("CALL GetOriginalAndUpdateAccess(:code)");
+    $stmt = $pdo->prepare("CALL short_link_get(:code)");
     $stmt->bindParam(':code', $code, PDO::PARAM_STR);
     $stmt->execute();
 
