@@ -17,7 +17,7 @@ try {
     $stmt->execute();
 
     // Fetch the original link
-    $result = $stmt->fetch();
+    $result = $stmt->get_result();
 
     if ($result && !empty($result['original_link'])) {
         header("Location: " . $result['original_link']);
