@@ -14,8 +14,8 @@ $allowed_routes = [
         'query' => 'SELECT name FROM user_profiles WHERE username = ?',
         'params' => 1
     ],
-    'get/foto' => [
-        'query' => 'SELECT foto FROM user_profiles WHERE username = ?',
+    'get/profile-picture' => [
+        'query' => 'SELECT photo FROM user_profiles WHERE username = ?',
         'params' => 1
     ],
     'get/de_running_total' => [
