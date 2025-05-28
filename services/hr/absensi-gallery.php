@@ -38,7 +38,7 @@ if ($dept !== "") {
     $types .= "s";
 }
 if ($name !== "") {
-    $where[] = "a.name = ?";
+    $where[] = "e.name = ?";
     $params[] = $name;
     $types .= "s";
 }
