@@ -79,6 +79,10 @@ if ($start_date && !$end_date) {
     $params[] = $start_date;
     $params[] = $end_date;
     $types .= "ss";
+} elseif ($type === "all"){
+    $where[] = "a.tanggal = ?";
+    $params[] = $start_date;
+    $types .= "s";
 }
 
 $whereClause = count($where) > 0 ? " AND " . implode(" AND ", $where) : "";
