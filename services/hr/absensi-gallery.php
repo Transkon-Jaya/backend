@@ -86,14 +86,14 @@ $whereClause = count($where) > 0 ? " AND " . implode(" AND ", $where) : "";
 // Construct SQL with placeholders
 $sql = "
     (
-        SELECT a.username, a.tanggal, a.foto_in AS foto, 'IN' AS status
+        SELECT a.username, e.name, a.tanggal, a.foto_in AS foto, 'IN' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
         WHERE a.foto_in IS NOT NULL $whereClause
     )
     UNION
     (
-        SELECT a.username, a.tanggal, a.foto_out AS foto, 'OUT' AS status
+        SELECT a.username, e.name, a.tanggal, a.foto_out AS foto, 'OUT' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
         WHERE a.foto_out IS NOT NULL $whereClause
