@@ -89,16 +89,15 @@ $sql = "
         SELECT a.username, a.tanggal, a.foto_in AS foto, 'IN' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
-        WHERE a.foto_in IS NOT NULL
+        WHERE a.foto_in IS NOT NULL $whereClause
     )
     UNION
     (
         SELECT a.username, a.tanggal, a.foto_out AS foto, 'OUT' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
-        WHERE a.foto_out IS NOT NULL
+        WHERE a.foto_out IS NOT NULL $whereClause
     )
-    WHERE 1=1 $whereClause
     ORDER BY tanggal DESC
 ";
 
@@ -111,8 +110,7 @@ if (!$stmt) {
 echo json_encode($sql);
 
 if (!empty($params)) {
-    // $stmt->bind_param($types, ...array_merge($params, $params)); // Bind twice for UNION
-    $stmt->bind_param($types, $params);
+    $stmt->bind_param(str_repeat($types, 2);, ...array_merge($params, $params)); // Bind twice for UNION
 }
 
 if (!$stmt->execute()) {
