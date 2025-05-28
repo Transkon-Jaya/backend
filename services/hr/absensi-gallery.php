@@ -110,7 +110,7 @@ if (!$stmt) {
 echo json_encode($sql);
 
 if (!empty($params)) {
-    $stmt->bind_param(str_repeat($types, 2);, ...array_merge($params, $params)); // Bind twice for UNION
+    $stmt->bind_param(str_repeat($types, 2), ...array_merge($params, $params)); // Bind twice for UNION
 }
 
 if (!$stmt->execute()) {
