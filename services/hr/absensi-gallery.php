@@ -107,8 +107,6 @@ if (!$stmt) {
     echo json_encode(["status" => 500, "error" => "Prepare failed: " . $conn->error]);
     exit;
 }
-echo json_encode($sql);
-
 if (!empty($params)) {
     $stmt->bind_param(str_repeat($types, 2), ...array_merge($params, $params)); // Bind twice for UNION
 }
