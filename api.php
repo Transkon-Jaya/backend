@@ -16,6 +16,7 @@ $allowed_routes = [
     'absensi'        => 'services/hr/absensi.php',
     'perizinan'      => 'services/hr/perizinan.php',
     'absensi-status' => 'services/hr/absensi-status.php',
+    'absensi-gallery'=> 'services/hr/absensi-gallery.php',
     'absensi-latest' => 'services/hr/absensi-latest.php',
     'absensi-summary'=> 'services/hr/absensi-summary.php',
     'de_site'        => 'services/de/de_site.php',
