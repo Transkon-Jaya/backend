@@ -86,7 +86,7 @@ $whereClause = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
 
 // Final SQL
 $sql = "
-    SELECT a.username, a.tanggal, a.foto_in AS foto, 'in' AS status
+    SELECT a.username, a.tanggal, a.foto_in AS foto, 'IN' AS status
     FROM hr_absensi a
     JOIN user_profiles e ON a.username = e.username
     WHERE a.foto_in IS NOT NULL
@@ -94,13 +94,13 @@ $sql = "
 
     UNION
 
-    SELECT a.username, a.tanggal, a.foto_out AS foto, 'out' AS status
+    SELECT a.username, a.tanggal, a.foto_out AS foto, 'OUT' AS status
     FROM hr_absensi a
     JOIN user_profiles e ON a.username = e.username
     WHERE a.foto_out IS NOT NULL
     " . ($whereClause ? "AND " . substr($whereClause, 6) : "") . "
 
-    ORDER BY tanggal DESC, status ASC
+    ORDER BY tanggal DESC
 ";
 
 $stmt = $conn->prepare($sql);
