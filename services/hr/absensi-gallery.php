@@ -111,7 +111,7 @@ if (!$stmt) {
 echo json_encode($sql);
 
 if (!empty($params)) {
-    $stmt->bind_param($types, ...array_merge($params, $params)); // Bind twice for UNION
+    // $stmt->bind_param($types, ...array_merge($params, $params)); // Bind twice for UNION
     $stmt->bind_param($types, $params);
 }
 
