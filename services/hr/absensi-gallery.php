@@ -81,7 +81,7 @@ if ($start_date && !$end_date) {
     $types .= "ss";
 } elseif ($type === "all"){
     $where[] = "a.tanggal = ?";
-    $params[] = $start_date;
+    $params[] = date("Y-m-d");
     $types .= "s";
 }
 
