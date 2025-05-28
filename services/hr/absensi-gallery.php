@@ -88,7 +88,7 @@ $whereClause = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
 $sql = "
     SELECT a.username, a.tanggal, a.foto_in AS foto, 'in' AS status
     FROM hr_absensi a
-    JOIN employee e ON a.username = e.username
+    JOIN user_profiles e ON a.username = e.username
     WHERE a.foto_in IS NOT NULL
     " . ($whereClause ? "AND " . substr($whereClause, 6) : "") . "
 
@@ -96,7 +96,7 @@ $sql = "
 
     SELECT a.username, a.tanggal, a.foto_out AS foto, 'out' AS status
     FROM hr_absensi a
-    JOIN employee e ON a.username = e.username
+    JOIN user_profiles e ON a.username = e.username
     WHERE a.foto_out IS NOT NULL
     " . ($whereClause ? "AND " . substr($whereClause, 6) : "") . "
 
@@ -127,8 +127,9 @@ while ($row = $result->fetch_assoc()) {
     $data[] = $row;
 }
 
-echo json_encode($data);
 echo json_encode($sql);
+echo json_encode($data);
+
 $stmt->close();
 $conn->close();
 ?>
