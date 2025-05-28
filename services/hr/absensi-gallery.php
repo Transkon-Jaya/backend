@@ -50,7 +50,7 @@ if ($start_date && !$end_date) {
         $params[] = $start_date;
         $types .= "s";
     } elseif ($type === "dept") {
-        $where[] = "a.tanggal BETWEEN DATE_SUB(?, INTERVAL 1 MONTH) AND DATE_ADD(?, INTERVAL 1 MONTH)";
+        $where[] = "a.tanggal BETWEEN ? AND DATE_ADD(?, INTERVAL 1 MONTH)";
         $params[] = $start_date;
         $params[] = $start_date;
         $types .= "ss";
@@ -65,7 +65,7 @@ if ($start_date && !$end_date) {
         $params[] = $end_date;
         $types .= "s";
     } elseif ($type === "dept") {
-        $where[] = "a.tanggal BETWEEN DATE_SUB(?, INTERVAL 1 MONTH) AND DATE_ADD(?, INTERVAL 1 MONTH)";
+        $where[] = "a.tanggal BETWEEN DATE_SUB(?, INTERVAL 1 MONTH) AND ?";
         $params[] = $end_date;
         $params[] = $end_date;
         $types .= "ss";
