@@ -31,7 +31,7 @@ if ($name !== "") {
     $type = "all";
 }
 
-// Basic filters
+// Base filters
 if ($dept !== "") {
     $where[] = "e.department = ?";
     $params[] = $dept;
@@ -81,25 +81,23 @@ if ($start_date && !$end_date) {
     $types .= "ss";
 }
 
-// WHERE clause
-$whereClause = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
+$whereClause = count($where) > 0 ? " AND " . implode(" AND ", $where) : "";
 
-// Final SQL
+// Construct SQL with placeholders
 $sql = "
-    SELECT a.username, a.tanggal, a.foto_in AS foto, 'IN' AS status
-    FROM hr_absensi a
-    JOIN user_profiles e ON a.username = e.username
-    WHERE a.foto_in IS NOT NULL
-    " . ($whereClause ? "AND " . substr($whereClause, 6) : "") . "
-
+    (
+        SELECT a.username, a.tanggal, a.foto_in AS foto, 'IN' AS status
+        FROM hr_absensi a
+        JOIN user_profiles e ON a.username = e.username
+        WHERE a.foto_in IS NOT NULL $whereClause
+    )
     UNION
-
-    SELECT a.username, a.tanggal, a.foto_out AS foto, 'OUT' AS status
-    FROM hr_absensi a
-    JOIN user_profiles e ON a.username = e.username
-    WHERE a.foto_out IS NOT NULL
-    " . ($whereClause ? "AND " . substr($whereClause, 6) : "") . "
-
+    (
+        SELECT a.username, a.tanggal, a.foto_out AS foto, 'OUT' AS status
+        FROM hr_absensi a
+        JOIN user_profiles e ON a.username = e.username
+        WHERE a.foto_out IS NOT NULL $whereClause
+    )
     ORDER BY tanggal DESC
 ";
 
@@ -111,7 +109,7 @@ if (!$stmt) {
 }
 
 if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
+    $stmt->bind_param($types, ...array_merge($params, $params)); // Bind twice for UNION
 }
 
 if (!$stmt->execute()) {
