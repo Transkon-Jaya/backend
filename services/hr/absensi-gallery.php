@@ -100,7 +100,6 @@ $sql = "
     )
     ORDER BY tanggal DESC
 ";
-echo json_encode($sql);
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -108,6 +107,7 @@ if (!$stmt) {
     echo json_encode(["status" => 500, "error" => "Prepare failed: " . $conn->error]);
     exit;
 }
+echo json_encode($sql);
 
 if (!empty($params)) {
     $stmt->bind_param($types, ...array_merge($params, $params)); // Bind twice for UNION
