@@ -128,6 +128,7 @@ while ($row = $result->fetch_assoc()) {
 }
 
 echo json_encode($data);
+echo json_encode($sql);
 $stmt->close();
 $conn->close();
 ?>
