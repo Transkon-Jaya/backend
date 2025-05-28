@@ -89,15 +89,16 @@ $sql = "
         SELECT a.username, a.tanggal, a.foto_in AS foto, 'IN' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
-        WHERE a.foto_in IS NOT NULL $whereClause
+        WHERE a.foto_in IS NOT NULL
     )
     UNION
     (
         SELECT a.username, a.tanggal, a.foto_out AS foto, 'OUT' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
-        WHERE a.foto_out IS NOT NULL $whereClause
+        WHERE a.foto_out IS NOT NULL
     )
+    WHERE 1=1 $whereClause
     ORDER BY tanggal DESC
 ";
 
