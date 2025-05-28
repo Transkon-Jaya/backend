@@ -100,6 +100,7 @@ $sql = "
     )
     ORDER BY tanggal DESC
 ";
+echo json_encode($sql);
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -125,7 +126,6 @@ while ($row = $result->fetch_assoc()) {
     $data[] = $row;
 }
 
-echo json_encode($sql);
 echo json_encode($data);
 
 $stmt->close();
