@@ -66,10 +66,10 @@ function handleUserLinks($username) {
     if ($username === '') {
         authorize(8, [], [], null);
 
-        $stmt = $conn->prepare("CALL short_links_all()");
+        $stmt = $conn->prepare("SELECT * FROM short_links");
     } else {
         authorize(9, [], [], $username);
-        $stmt = $conn->prepare("SELECT * FROM short_links;");
+        $stmt = $conn->prepare("SELECT * FROM short_links WHERE created_by = ?");
     }
 
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
@@ -87,7 +87,7 @@ function handleUserLinks($username) {
         $links[] = $row;
     }
 
-    echo json_encode(['links' => $links]);
+    echo json_encode($links);
     $stmt->close();
 }
 
