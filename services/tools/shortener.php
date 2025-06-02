@@ -8,7 +8,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 try {
     switch ($method) {
         case 'GET':
-            handleGet();
+            handleGet($conn);
             break;
         case 'POST':
             handlePost();
@@ -31,9 +31,9 @@ try {
     $conn->close();
 }
 
-function handleGet() {
+function handleGet($conn) {
     if (isset($_GET['code']) && $_GET['code'] !== '') {
-        handleRedirect();
+        handleRedirect($conn);
     } elseif (isset($_GET['username'])) {
         handleUserLinks($_GET['username']);
     } else {
@@ -43,7 +43,7 @@ function handleGet() {
 }
 
 
-function handleRedirect() {
+function handleRedirect($conn) {
     $code = $_GET['code'];
     $stmt = $conn->prepare("CALL short_link_get(?)");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
