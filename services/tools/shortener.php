@@ -97,11 +97,13 @@ function handleUserLinks($conn) {
 // POST with JSON: { "code": "abc123", "original_link": "https://example.com" }
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
+
     if (empty($input['code']) || empty($input['original_link'])) {
         http_response_code(400);
         echo json_encode(['error' => 'Missing required fields.']);
         return;
     }
+
     authorize(9, [], [], null);
     $user = verifyToken();
     $username = $user['username'] ?? null;
@@ -109,15 +111,45 @@ function handlePost($conn) {
     $code = $input['code'];
     $original_link = $input['original_link'];
 
-    $stmt = $conn->prepare("INSERT short_links(link, original_link, created_by) VALUES (?, ?, ?)");
+    // Step 1: Check if code already exists
+    $checkStmt = $conn->prepare("SELECT * FROM short_links WHERE link = ?");
+    if (!$checkStmt) throw new Exception("Prepare failed: " . $conn->error);
+
+    $checkStmt->bind_param("s", $code);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+
+    if ($result && $row = $result->fetch_assoc()) {
+        // Code already exists
+        echo json_encode([
+            'status' => 0,
+            'message' => 'Short link already exists.',
+            'data' => $row
+        ]);
+        $checkStmt->close();
+        return;
+    }
+    $checkStmt->close();
+
+    // Step 2: Insert new short link
+    $stmt = $conn->prepare("INSERT INTO short_links (link, original_link, created_by) VALUES (?, ?, ?)");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
     $stmt->bind_param("sss", $code, $original_link, $username);
     if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
 
-    echo json_encode(['message' => 'Short link created.']);
+    echo json_encode([
+        'status' => 1,
+        'message' => 'Short link created.',
+        'data' => [
+            'code' => $code,
+            'original_link' => $original_link,
+        ]
+    ]);
+
     $stmt->close();
 }
+
 
 // PUT with JSON: { "code": "abc123", "original_link": "https://updated.com" }
 function handlePut() {
