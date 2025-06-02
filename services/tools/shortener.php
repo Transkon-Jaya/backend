@@ -69,7 +69,7 @@ function handleUserLinks($username) {
         $stmt = $conn->prepare("CALL short_links_all()");
     } else {
         authorize(9, [], [], $username);
-        $stmt = $conn->prepare("CALL short_links_by_user(?)");
+        $stmt = $conn->prepare("SELECT * FROM short_links;");
     }
 
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
