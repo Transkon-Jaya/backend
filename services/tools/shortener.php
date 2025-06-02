@@ -11,7 +11,7 @@ try {
             handleGet($conn);
             break;
         case 'POST':
-            handlePost();
+            handlePost($conn);
             break;
         case 'PUT':
             handlePut();
@@ -95,7 +95,7 @@ function handleUserLinks($conn) {
 
 
 // POST with JSON: { "code": "abc123", "original_link": "https://example.com" }
-function handlePost() {
+function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     if (empty($input['code']) || empty($input['original_link'])) {
         http_response_code(400);
