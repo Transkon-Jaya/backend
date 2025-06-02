@@ -14,10 +14,10 @@ try {
             handlePost($conn);
             break;
         case 'PUT':
-            handlePut();
+            handlePut($conn);
             break;
         case 'DELETE':
-            handleDelete();
+            handleDelete($conn);
             break;
         default:
             http_response_code(405);
@@ -152,7 +152,7 @@ function handlePost($conn) {
 
 
 // PUT with JSON: { "code": "abc123", "original_link": "https://updated.com" }
-function handlePut() {
+function handlePut($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     if (empty($input['code']) || empty($input['original_link'])) {
         http_response_code(400);
@@ -162,11 +162,14 @@ function handlePut() {
 
     $code = $input['code'];
     $original_link = $input['original_link'];
+    authorize(9, [], [], null);
+    $user = verifyToken();
+    $username = $user['username'] ?? null;
 
-    $stmt = $conn->prepare("CALL short_link_update(?, ?)");
+    $stmt = $conn->prepare("UPDATE short_links SET original_link = ? WHERE link = ? AND created_by = ?");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
-    $stmt->bind_param("ss", $code, $original_link);
+    $stmt->bind_param("sss", $original_link, $code, $username);
     if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
 
     echo json_encode(['message' => 'Short link updated.']);
