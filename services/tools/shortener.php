@@ -102,14 +102,17 @@ function handlePost() {
         echo json_encode(['error' => 'Missing required fields.']);
         return;
     }
+    authorize(9, [], [], null);
+    $user = verifyToken();
+    $username = $user['username'] ?? null;
 
     $code = $input['code'];
     $original_link = $input['original_link'];
 
-    $stmt = $conn->prepare("CALL short_link_create(?, ?)");
+    $stmt = $conn->prepare("INSERT short_links(link, original_link, created_by) VALUES (?, ?, ?)");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
-    $stmt->bind_param("ss", $code, $original_link);
+    $stmt->bind_param("sss", $code, $original_link, $username);
     if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
 
     echo json_encode(['message' => 'Short link created.']);
