@@ -35,7 +35,7 @@ function handleGet($conn) {
     if (isset($_GET['code']) && $_GET['code'] !== '') {
         handleRedirect($conn);
     } elseif (isset($_GET['username'])) {
-        handleUserLinks($_GET['username']);
+        handleUserLinks($conn);
     } else {
         http_response_code(400);
         echo json_encode(['error' => 'Missing required parameters.']);
@@ -62,7 +62,8 @@ function handleRedirect($conn) {
     $stmt->close();
 }
 
-function handleUserLinks($username) {
+function handleUserLinks($conn) {
+    $username = $_GET['username'];
     if ($username === '') {
         authorize(8, [], [], null);
 
