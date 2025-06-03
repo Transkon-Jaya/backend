@@ -176,9 +176,9 @@ function handlePut($conn) {
     $stmt->close();
 }
 
-// DELETE with body: code=abc123
-function handleDelete() {
+// DELETE with body: code=abc123function handleDelete($conn) {
     parse_str(file_get_contents("php://input"), $input);
+
     if (empty($input['code'])) {
         http_response_code(400);
         echo json_encode(['error' => 'Missing short link code.']);
@@ -187,12 +187,44 @@ function handleDelete() {
 
     $code = $input['code'];
 
-    $stmt = $conn->prepare("CALL short_link_delete(?)");
+    // Ambil username dari token
+    $user = verifyToken();
+    $username = $user['username'] ?? null;
+
+    // Ambil created_by dari DB
+    $checkStmt = $conn->prepare("SELECT created_by FROM short_links WHERE link = ?");
+    if (!$checkStmt) throw new Exception("Prepare failed: " . $conn->error);
+
+    $checkStmt->bind_param("s", $code);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+
+    if (!$result || !$row = $result->fetch_assoc()) {
+        http_response_code(404);
+        echo json_encode(['error' => 'Short link not found.']);
+        $checkStmt->close();
+        return;
+    }
+
+    $created_by = $row['created_by'];
+    $checkStmt->close();
+
+    // Authorisasi: pastikan user adalah pemilik atau admin
+    authorize(9, [], [], $created_by);
+
+    // DELETE hanya jika user pemilik
+    $stmt = $conn->prepare("DELETE FROM short_links WHERE link = ? AND created_by = ?");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
-    $stmt->bind_param("s", $code);
+    $stmt->bind_param("ss", $code, $username); // bind 2 params
     if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
 
-    echo json_encode(['message' => 'Short link deleted.']);
+    if ($stmt->affected_rows === 0) {
+        http_response_code(403);
+        echo json_encode(['error' => 'You are not allowed to delete this link.']);
+    } else {
+        echo json_encode(['message' => 'Short link deleted.']);
+    }
+
     $stmt->close();
 }
