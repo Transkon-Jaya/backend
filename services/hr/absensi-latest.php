@@ -1,32 +1,44 @@
 <?php
 header("Content-Type: application/json");
 require 'db.php';
+require 'auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        // if (!isset($_GET['username'])) {
-        //     http_response_code(400);
-        //     echo json_encode(["status" => 400, "error" => "No Username!"]);
-        //     break;
-        // }
+        authorize(8, ["admin_absensi"], ["no_absensi"], null);
+        $user = verifyToken();
+        $id_company = $user['id_company'] ?? null;
 
-        // $username = $conn->real_escape_string($_GET['username']);
-        $sql = "CALL hr_absensi_latest();";
-        $result = $conn->query($sql);
-        if (!$result) {
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $conn->error]);
+        if (!$id_company) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Missing company ID"]);
             break;
         }
 
+        $stmt = $conn->prepare("CALL hr_absensi_latest(?)");
+        if (!$stmt) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "Prepare failed: " . $conn->error]);
+            break;
+        }
+
+        $stmt->bind_param("i", $id_company);
+        if (!$stmt->execute()) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "Execute failed: " . $stmt->error]);
+            break;
+        }
+
+        $result = $stmt->get_result();
         $status = [];
         while ($row = $result->fetch_assoc()) {
             $status[] = $row;
         }
 
         echo json_encode($status);
+        $stmt->close();
         break;
 
     default:

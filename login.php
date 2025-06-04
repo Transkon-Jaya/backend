@@ -48,6 +48,7 @@ if ($user) {
     $user_level = $user["user_level"];
     $photo = $user["photo"];
     $name = $user["name"];
+    $id_company = $user["id_company"];
     $sql = "CALL user_get_permissions(?)";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $username);
@@ -65,6 +66,7 @@ if ($user) {
         $payload = [
             "username" => $username,
             "name" => $name,
+            "id_company" => $id_company,
             "photo" => $photo,
             "user_level" => $user_level,
             "permissions" => $permissions,
