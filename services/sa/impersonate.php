@@ -74,6 +74,7 @@ $payload = [
     "photo" => $user['photo'],
     "user_level" => $user['user_level'],
     "permissions" => $permissions,
+    "id_company" => $user["id_company"],
     "exp" => $expiration_time
 ];
 
