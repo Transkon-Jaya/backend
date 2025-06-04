@@ -7,7 +7,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        authorize(8, ["admin_absensi"], ["no_absensi"], null);
+        authorize(8, ["admin_absensi"], [], null);
         $user = verifyToken();
         $id_company = $user['id_company'] ?? null;
 
