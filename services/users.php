@@ -24,7 +24,9 @@ switch ($method) {
                 // Regular user: search username + filter by company
                 $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site
                                         FROM user_profiles 
-                                        WHERE username LIKE CONCAT(?, '%') AND (id_company = ? OR id_company IS NULL)
+                                        WHERE username LIKE CONCAT(?, '%') 
+                                            AND (id_company = ? OR id_company IS NULL)
+                                            AND placement != 'Admin'
                                         ORDER BY username ASC");
                 $stmt->bind_param("si", $username, $id_company);
             }
@@ -39,6 +41,7 @@ switch ($method) {
                 $stmt = $conn->prepare("SELECT username, name, department, jabatan, placement, gender, lokasi, site 
                                         FROM user_profiles
                                         WHERE id_company = ?
+                                            AND placement != 'Admin'
                                         ORDER BY username ASC");
                 $stmt->bind_param("i", $id_company);
             }
