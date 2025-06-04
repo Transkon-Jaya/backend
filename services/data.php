@@ -7,16 +7,25 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
 
 // Require DB connection
 require_once __DIR__ . '/../db.php';
+require_once 'auth.php';
 
+$user = verifyToken();
+$id_company = $user['id_company'] ?? -1;
+
+if ($id_company == -1) {
+    http_response_code(400);
+    echo json_encode(["status" => 400, "error" => "Missing company ID"]);
+    exit();
+}
 // Define allowed routes with query and parameter count
 $allowed_routes = [
-    'data/absensi_all' => [
-        'query' => 'CALL hr_absensi_all(?, ?, ?)',
-        'params' => 3
+    "data/absensi_all" => [
+        "query" => "CALL hr_absensi_all(?, ?, ?)",
+        "params" => 3
     ],
-    'data/hr_absensi_timesheet' => [
-        'query' => 'CALL hr_absensi_timesheet(?, ?, ?, ?, ?)',
-        'params' => 5
+    "data/hr_absensi_timesheet" => [
+        "query" => "CALL hr_absensi_timesheet($id_company, ?, ?, ?, ?, ?)",
+        "params" => 5
     ]
 ];
 
