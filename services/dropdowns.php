@@ -123,16 +123,25 @@ if (isset($allowed_routes[$request])) {
 
     if ($id_company != 0 && $companyScoped) {
         if (stripos($config['query'], 'where') !== false) {
-            // 'WHERE' exists, add condition using AND
-            $config['query'] .= " AND id_company = ?";
+            // Already has WHERE clause
+            $config['query'] = preg_replace(
+                '/(order\s+by)/i',
+                "AND id_company = ? $1",
+                $config['query']
+            );
         } else {
-            // No 'WHERE' yet, start the WHERE clause
-            $config['query'] .= " WHERE id_company = ?";
+            // Add WHERE before ORDER BY
+            $config['query'] = preg_replace(
+                '/(order\s+by)/i',
+                "WHERE id_company = ? $1",
+                $config['query']
+            );
         }
+
         $params[] = $id_company;
         $config['params'] += 1;
     }
-    echo json_encode($config);
+    // echo json_encode($config);
 
     // Prepare the query
     $stmt = $conn->prepare($config["query"]);
