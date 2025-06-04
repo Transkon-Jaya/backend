@@ -122,30 +122,24 @@ if (isset($allowed_routes[$request])) {
     }
 
     if ($id_company != 0 && $companyScoped) {
-        if (stripos($config['query'], 'where') !== false) {
-            // Query already has WHERE, add AND before ORDER BY (if it exists)
-            if (stripos($config['query'], 'order by') !== false) {
-                $config['query'] = preg_replace(
-                    '/(order\s+by)/i',
-                    "AND id_company = ? $1",
-                    $config['query']
-                );
-            } else {
-                $config['query'] .= " AND id_company = ?";
-            }
-        } else {
-            // No WHERE clause yet
-            if (stripos($config['query'], 'order by') !== false) {
-                $config['query'] = preg_replace(
-                    '/(order\s+by)/i',
-                    "WHERE id_company = ? $1",
-                    $config['query']
-                );
-            } else {
-                $config['query'] .= " WHERE id_company = ?";
-            }
+        // Detect and extract ORDER BY clause if it exists
+        $orderBy = '';
+        if (preg_match('/\s+ORDER\s+BY\s+.+$/i', $config['query'], $matches)) {
+            $orderBy = $matches[0]; // e.g., " ORDER BY department"
+            $config['query'] = preg_replace('/\s+ORDER\s+BY\s+.+$/i', '', $config['query']); // remove ORDER BY temporarily
         }
 
+        // Add WHERE or AND depending on existing clause
+        if (stripos($config['query'], 'where') !== false) {
+            $config['query'] .= " AND id_company = ?";
+        } else {
+            $config['query'] .= " WHERE id_company = ?";
+        }
+
+        // Re-append ORDER BY if it was removed
+        $config['query'] .= $orderBy;
+
+        // Append param and increment
         $params[] = $id_company;
         $config['params'] += 1;
     }
