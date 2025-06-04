@@ -143,7 +143,7 @@ if (isset($allowed_routes[$request])) {
         $params[] = $id_company;
         $config['params'] += 1;
     }
-
+    echo json_encode({"adf": $id_company, "adsf": $companyScoped});
     echo json_encode($config);
 
     // Prepare the query
