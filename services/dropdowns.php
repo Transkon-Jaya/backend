@@ -137,11 +137,10 @@ if (isset($allowed_routes[$request])) {
                 $config['query']
             );
         }
-
         $params[] = $id_company;
         $config['params'] += 1;
     }
-    // echo json_encode($config);
+    echo json_encode($config);
 
     // Prepare the query
     $stmt = $conn->prepare($config["query"]);
