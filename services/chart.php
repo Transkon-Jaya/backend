@@ -15,7 +15,6 @@ $id_company = $user['id_company'] ?? -1;
 if ($id_company == -1) {
     http_response_code(400);
     echo json_encode(["status" => 400, "error" => "Missing company ID"]);
-    break;
 }
 
 // Fallback: If params[] is not provided, collect numeric keys like 0=, 1=, etc.
@@ -142,7 +141,6 @@ if (isset($allowed_routes[$request])) {
         ]);
         exit();
     }
-    echo json_encode("hey")
     $stmt = $conn->prepare($config['query']);
     if ($stmt === false) {
         http_response_code(500);
