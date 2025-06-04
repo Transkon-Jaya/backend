@@ -142,7 +142,7 @@ if (isset($allowed_routes[$request])) {
         ]);
         exit();
     }
-
+    echo json_encode("hey")
     $stmt = $conn->prepare($config['query']);
     if ($stmt === false) {
         http_response_code(500);
