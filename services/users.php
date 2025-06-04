@@ -13,7 +13,7 @@ switch ($method) {
         $username = isset($_GET['username']) ? $_GET['username'] : '';
 
         if (!empty($username)) {
-            if ($id_company === null) {
+            if ($id_company === 0) {
                 // Superadmin: search username without company filter
                 $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site
                                         FROM user_profiles 
@@ -29,7 +29,7 @@ switch ($method) {
                 $stmt->bind_param("si", $username, $id_company);
             }
         } else {
-            if ($id_company === null) {
+            if ($id_company === 0) {
                 // Superadmin: get all users
                 $stmt = $conn->prepare("SELECT username, name, department, jabatan, placement, gender, lokasi, site 
                                         FROM user_profiles
