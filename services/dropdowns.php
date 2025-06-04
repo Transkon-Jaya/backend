@@ -44,7 +44,7 @@ $allowed_routes = [
         'query' => "SELECT DISTINCT nama FROM hr_location ORDER BY nama",
     ],
     $prefix.'name' => [
-        'query' => "SELECT DISTINCT name FROM user_profiles WHERE id_company = $id_company OR $id_company = 0",
+        'query' => "SELECT DISTINCT name FROM user_profiles WHERE (id_company = $id_company OR $id_company = 0) AND placement != 'Admin' ",
     ],
     $prefix.'op_svc_category' => [
         'query' => "SELECT category FROM op_svc_category ORDER BY priority",
