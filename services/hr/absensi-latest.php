@@ -9,6 +9,7 @@ switch ($method) {
     case 'GET':
         authorize(8, ["admin_absensi"], [], null);
         $user = verifyToken();
+        echo json_encode($user);
         $id_company = $user['id_company'] ?? null;
 
         if (!$id_company) {
