@@ -27,7 +27,7 @@ try {
         INNER JOIN user_profiles up ON a.username = up.username
         WHERE a.tanggal = CURDATE() 
         AND a.hour_in IS NOT NULL
-        AND up.id_company = ?
+        AND ($id_company = 0 OR up.id_company = $id_company)
     ";
 
     $stmt = $conn->prepare($sql);
@@ -35,7 +35,6 @@ try {
         throw new Exception("Prepare failed: " . $conn->error);
     }
 
-    $stmt->bind_param("i", $id_company);
     if (!$stmt->execute()) {
         throw new Exception("Execute failed: " . $stmt->error);
     }
