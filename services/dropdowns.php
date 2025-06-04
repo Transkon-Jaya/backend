@@ -38,7 +38,7 @@ $allowed_routes = [
         'query' => "SELECT DISTINCT name FROM customer",
     ],
     $prefix.'department' => [
-        'query' => "SELECT DISTINCT department FROM user_profiles WHERE id_company = $id_company OR $id_company = 0 ORDER BY department",
+        'query' => "SELECT DISTINCT department FROM user_profiles WHERE $id_company = 0 OR id_company = $id_company ORDER BY department",
     ],
     $prefix.'location' => [
         'query' => "SELECT DISTINCT nama FROM hr_location ORDER BY nama",
