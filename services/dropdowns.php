@@ -107,7 +107,6 @@ $companyScoped = in_array($request, [
 
 if (isset($allowed_routes[$request])) {
     $config = array_merge($default_config, $allowed_routes[$request]);
-    $params = [];
 
     if($config["auth"]){
         authorize($config["level"], $config["permissions"], $config["not_permissions"], $config["username"]);
