@@ -15,6 +15,7 @@ $id_company = $user['id_company'] ?? -1;
 if ($id_company == -1) {
     http_response_code(400);
     echo json_encode(["status" => 400, "error" => "Missing company ID"]);
+    exit();
 }
 
 // Fallback: If params[] is not provided, collect numeric keys like 0=, 1=, etc.
