@@ -7,6 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 
 require_once __DIR__ . '/../db.php';
 require_once 'auth.php';
+$user = verifyToken();
+$id_company = $user["id_company"] ?? null;
 
 // Fallback: If params[] is not provided, collect numeric keys like 0=, 1=, etc.
 if (isset($_GET['params'])) {
@@ -97,6 +99,12 @@ $default_config = [
 // Get the requested route
 $request = $_GET['request'] ?? '';
 
+$companyScoped = in_array($request, [
+    $prefix.'name',
+    $prefix.'department',
+    $prefix.'position'
+]);
+
 if (isset($allowed_routes[$request])) {
     $config = array_merge($default_config, $allowed_routes[$request]);
 
@@ -111,6 +119,18 @@ if (isset($allowed_routes[$request])) {
             'error' => "Wrong parameters for '$request'"
         ]);
         exit();
+    }
+
+    if ($id_company != 0 && $companyScoped) {
+        if (stripos($config['query'], 'where') !== false) {
+            // 'WHERE' exists, add condition using AND
+            $config['query'] .= " AND id_company = ?";
+        } else {
+            // No 'WHERE' yet, start the WHERE clause
+            $config['query'] .= " WHERE id_company = ?";
+        }
+        $params[] = $id_company;
+        $config['params'] += 1;
     }
 
     // Prepare the query
