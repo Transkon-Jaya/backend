@@ -12,7 +12,6 @@ if ($method !== 'GET') {
 }
 
 try {
-    // Auth & permission check
     authorize(8, ["admin_absensi"], [], null);
     $user = verifyToken();
     $id_company = $user['id_company'] ?? null;
