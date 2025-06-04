@@ -4,6 +4,8 @@ require 'db.php';
 require 'auth.php';
 
 authorize(8, ["admin_absensi"], [], null);
+$user = verifyToken();
+$id_company = $user['id_company'] ?? null;
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -87,20 +89,26 @@ if ($start_date && !$end_date) {
 
 $whereClause = count($where) > 0 ? " AND " . implode(" AND ", $where) : "";
 
+$companyClause = "";
+if ($id_company !== 0) {
+    $companyClause = " AND (e.id_company = ?)";
+    $params[] = $id_company;
+    $types .= "i";
+}
 // Construct SQL with placeholders
 $sql = "
     (
         SELECT a.username, e.name, a.tanggal, a.hour_in AS hour, a.foto_in AS foto, 'IN' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
-        WHERE a.foto_in IS NOT NULL $whereClause
+        WHERE a.foto_in IS NOT NULL $whereClause $companyClause
     )
     UNION
     (
         SELECT a.username, e.name, a.tanggal,a.hour_out AS hour, a.foto_out AS foto, 'OUT' AS status
         FROM hr_absensi a
         JOIN user_profiles e ON a.username = e.username
-        WHERE a.foto_out IS NOT NULL $whereClause
+        WHERE a.foto_out IS NOT NULL $whereClause $companyClause
     )
     ORDER BY hour DESC
 ";
