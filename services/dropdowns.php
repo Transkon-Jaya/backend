@@ -38,13 +38,13 @@ $allowed_routes = [
         'query' => "SELECT DISTINCT name FROM customer",
     ],
     $prefix.'department' => [
-        'query' => "SELECT DISTINCT department FROM user_profiles ORDER BY department",
+        'query' => "SELECT DISTINCT department FROM user_profiles WHERE id_company = $id_company OR $id_company = 0 ORDER BY department",
     ],
     $prefix.'location' => [
         'query' => "SELECT DISTINCT nama FROM hr_location ORDER BY nama",
     ],
     $prefix.'name' => [
-        'query' => "SELECT DISTINCT name FROM user_profiles WHERE id_company = $id_company",
+        'query' => "SELECT DISTINCT name FROM user_profiles WHERE id_company = $id_company OR $id_company = 0",
     ],
     $prefix.'op_svc_category' => [
         'query' => "SELECT category FROM op_svc_category ORDER BY priority",
@@ -99,12 +99,6 @@ $default_config = [
 // Get the requested route
 $request = $_GET['request'] ?? '';
 
-$companyScoped = in_array($request, [
-    $prefix.'name',
-    $prefix.'department',
-    $prefix.'position'
-]);
-
 if (isset($allowed_routes[$request])) {
     $config = array_merge($default_config, $allowed_routes[$request]);
 
@@ -120,32 +114,6 @@ if (isset($allowed_routes[$request])) {
         ]);
         exit();
     }
-
-    // if ($id_company != 0 && $companyScoped) {
-    //     // Detect and extract ORDER BY clause if it exists
-    //     $orderBy = '';
-    //     if (preg_match('/\s+ORDER\s+BY\s+.+$/i', $config['query'], $matches)) {
-    //         $orderBy = $matches[0]; // e.g., " ORDER BY department"
-    //         $config['query'] = preg_replace('/\s+ORDER\s+BY\s+.+$/i', '', $config['query']); // remove ORDER BY temporarily
-    //     }
-
-    //     // Add WHERE or AND depending on existing clause
-    //     if (stripos($config['query'], 'where') !== false) {
-    //         $config['query'] .= " AND id_company = ?";
-    //     } else {
-    //         $config['query'] .= " WHERE id_company = ?";
-    //     }
-
-    //     // Re-append ORDER BY if it was removed
-    //     $config['query'] .= $orderBy;
-
-    //     // Append param and increment
-    //     $params[] = $id_company;
-    //     $config['params'] += 1;
-    // }
-    // echo json_encode(["adf" => $id_company, "adsf" => $companyScoped]);
-
-    // echo json_encode($config);
 
     // Prepare the query
     $stmt = $conn->prepare($config["query"]);
