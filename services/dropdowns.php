@@ -145,7 +145,7 @@ if (isset($allowed_routes[$request])) {
     }
     // echo json_encode(["adf" => $id_company, "adsf" => $companyScoped]);
 
-    // echo json_encode($config);
+    echo json_encode($config);
 
     // Prepare the query
     $stmt = $conn->prepare($config["query"]);
