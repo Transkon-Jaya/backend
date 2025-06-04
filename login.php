@@ -66,10 +66,10 @@ if ($user) {
         $payload = [
             "username" => $username,
             "name" => $name,
-            "id_company" => $id_company,
             "photo" => $photo,
             "user_level" => $user_level,
             "permissions" => $permissions,
+            "id_company" => $id_company,
             "exp" => $expiration_time
         ];
         http_response_code(200);
