@@ -9,9 +9,9 @@ switch ($method) {
     case 'GET':
         authorize(8, ["admin_absensi"], [], null);
         $user = verifyToken();
-        $id_company = $user['id_company'] ?? null;
+        $id_company = $user['id_company'] ?? -1;
 
-        if (!$id_company) {
+        if ($id_company == -1) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Missing company ID"]);
             break;

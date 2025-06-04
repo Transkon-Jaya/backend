@@ -14,9 +14,9 @@ if ($method !== 'GET') {
 try {
     authorize(8, ["admin_absensi"], [], null);
     $user = verifyToken();
-    $id_company = $user['id_company'] ?? null;
+    $id_company = $user['id_company'] ?? -1;
 
-    if (!$id_company) {
+    if ($id_company == -1) {
         throw new Exception("Missing id_company in token.");
     }
 
