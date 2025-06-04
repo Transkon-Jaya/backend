@@ -10,7 +10,8 @@ require_once __DIR__ . '/../db.php';
 require_once 'auth.php';
 
 $user = verifyToken();
-$id_company = $user["id_company"] ?? -1;
+$id_company = $user['id_company'] ?? -1;
+
 if ($id_company == -1) {
     http_response_code(400);
     echo json_encode(["status" => 400, "error" => "Missing company ID"]);
