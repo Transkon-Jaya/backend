@@ -1,23 +1,31 @@
 <?php
 header("Content-Type: application/json");
 require 'db.php';
+require 'auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET': // Fetch user profiles
+        authorize(8, ["admin_absensi"], [], null);
+        $user = verifyToken();
+        $id_company = $user['id_company'] ?? null;
+
         $username = isset($_GET['username']) ? $_GET['username'] : '';
 
         if (!empty($username)) {
             $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan,email, phone, gaji_pokok,site
                                     FROM user_profiles 
                                     WHERE username LIKE CONCAT(?, '%')
+                                        AND id_company = ?
                                     ORDER BY username ASC");
-            $stmt->bind_param("s", $username);
+            $stmt->bind_param("si", $username, $id_company);
         } else {
             $stmt = $conn->prepare("SELECT username, name, department,jabatan, placement, gender, lokasi,site 
-                                    FROM user_profiles 
+                                    FROM user_profiles
+                                    WHERE id_company = ?
                                     ORDER BY username ASC");
+            $stmt->bind_param("i", $id_company);
         }
 
         if (!$stmt->execute()) {
