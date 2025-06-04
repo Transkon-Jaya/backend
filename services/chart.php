@@ -29,36 +29,36 @@ if (!is_array($params)) {
 }
 
 // Define allowed routes with query and parameter count
-$prefix = 'chart/';
+$prefix = "chart/";
 $allowed_routes = [
     //--ABSENSI START--//
-    $prefix.'absensi_avg_hw' => [
-        'query' => 'CALL absensi_avg_hw(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
+    $prefix."absensi_avg_hw" => [
+        "query" => "CALL absensi_avg_hw($id_company, ?, ?, ?, ?, ?)", // limit_day, day_start, name, department, site
+        "params" => 5
     ],
-    $prefix.'absensi_avg_hi' => [
-        'query' => 'CALL absensi_avg_hi(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
+    $prefix."absensi_avg_hi" => [
+        "query" => "CALL absensi_avg_hi(?, ?, ?, ?, ?)", // limit_day, day_start, name, department, site
+        "params" => 5
     ],
-    $prefix.'absensi_avg_ho' => [
-        'query' => 'CALL absensi_avg_ho(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
+    $prefix."absensi_avg_ho" => [
+        "query" => "CALL absensi_avg_ho(?, ?, ?, ?, ?)", // limit_day, day_start, name, department, site
+        "params" => 5
     ],
-    $prefix.'absensi_avg_hio' => [
-        'query' => 'CALL absensi_avg_hio(?, ?, ?, ?, ?)', // limit_day, day_start, name, department, site
-        'params' => 5
+    $prefix."absensi_avg_hio" => [
+        "query" => "CALL absensi_avg_hio($id_company, ?, ?, ?, ?, ?)", // limit_day, day_start, name, department, site
+        "params" => 5
     ],
-    $prefix.'absensi_leaderboard_hi_asc' => [
-        'query' => 'CALL absensi_leaderboard_hi_asc(?, ?, ?, ?, ?)', //start_date, end_date, department, location, placement
-        'params' => 5,
-        'level' => 8,
-        'permissions' => ['admin_absensi'],
+    $prefix."absensi_leaderboard_hi_asc" => [
+        "query" => "CALL absensi_leaderboard_hi_asc(?, ?, ?, ?, ?)", //start_date, end_date, department, location, placement
+        "params" => 5,
+        "level" => 8,
+        "permissions" => ["admin_absensi"],
     ],
-    $prefix.'absensi_leaderboard_hi_desc' => [
-        'query' => 'CALL absensi_leaderboard_hi_desc(?, ?, ?, ?, ?)', //start_date, end_date, department, location, placement
-        'params' => 5,
-        'level' => 8,
-        'permissions' => ['admin_absensi'],
+    $prefix."absensi_leaderboard_hi_desc" => [
+        "query" => "CALL absensi_leaderboard_hi_desc(?, ?, ?, ?, ?)", //start_date, end_date, department, location, placement
+        "params" => 5,
+        "level" => 8,
+        "permissions" => ["admin_absensi"],
     ],
     $prefix.'absensi_leaderboard_ho_asc' => [
         'query' => 'CALL absensi_leaderboard_ho_asc(?, ?, ?, ?, ?)', //start_date, end_date, department, location, placement
