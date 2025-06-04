@@ -10,23 +10,40 @@ switch ($method) {
         authorize(8, ["admin_absensi"], [], null);
         $user = verifyToken();
         $id_company = $user['id_company'] ?? null;
-
         $username = isset($_GET['username']) ? $_GET['username'] : '';
 
         if (!empty($username)) {
-            $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan,email, phone, gaji_pokok,site
-                                    FROM user_profiles 
-                                    WHERE username LIKE CONCAT(?, '%')
-                                        AND id_company = ?
-                                    ORDER BY username ASC");
-            $stmt->bind_param("si", $username, $id_company);
+            if ($id_company === null) {
+                // Superadmin: search username without company filter
+                $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site
+                                        FROM user_profiles 
+                                        WHERE username LIKE CONCAT(?, '%')
+                                        ORDER BY username ASC");
+                $stmt->bind_param("s", $username);
+            } else {
+                // Regular user: search username + filter by company
+                $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site
+                                        FROM user_profiles 
+                                        WHERE username LIKE CONCAT(?, '%') AND (id_company = ? OR id_company IS NULL)
+                                        ORDER BY username ASC");
+                $stmt->bind_param("si", $username, $id_company);
+            }
         } else {
-            $stmt = $conn->prepare("SELECT username, name, department,jabatan, placement, gender, lokasi,site 
-                                    FROM user_profiles
-                                    WHERE id_company = ?
-                                    ORDER BY username ASC");
-            $stmt->bind_param("i", $id_company);
+            if ($id_company === null) {
+                // Superadmin: get all users
+                $stmt = $conn->prepare("SELECT username, name, department, jabatan, placement, gender, lokasi, site 
+                                        FROM user_profiles
+                                        ORDER BY username ASC");
+            } else {
+                // Regular user: filter by company + global
+                $stmt = $conn->prepare("SELECT username, name, department, jabatan, placement, gender, lokasi, site 
+                                        FROM user_profiles
+                                        WHERE id_company = ?
+                                        ORDER BY username ASC");
+                $stmt->bind_param("i", $id_company);
+            }
         }
+
 
         if (!$stmt->execute()) {
             http_response_code(500);
