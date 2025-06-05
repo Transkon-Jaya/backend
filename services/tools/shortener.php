@@ -137,7 +137,7 @@ function handlePost($conn) {
 
             echo json_encode([
                 'status' => 2,
-                'message' => 'Soft-deleted link restored.',
+                'message' => 'Short link created.',
                 'data' => [
                     'code' => $code,
                     'original_link' => $original_link,
