@@ -37,7 +37,7 @@ $allowed_routes = [
 ];
 
 $allowed_startswith = [
-    'hr' => 'services/hr.php',
+    'hr' => 'services/hr/hr.php',
     'chart' => 'services/chart.php',
     'dropdowns' => 'services/dropdowns.php',
     'get'   => 'services/get.php',
