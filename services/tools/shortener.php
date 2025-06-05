@@ -176,7 +176,8 @@ function handlePut($conn) {
     $stmt->close();
 }
 
-// DELETE with body: code=abc123function handleDelete($conn) {
+// DELETE with body: code=abc123
+function handleDelete($conn) {
     parse_str(file_get_contents("php://input"), $input);
 
     if (empty($input['code'])) {
