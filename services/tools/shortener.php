@@ -178,7 +178,7 @@ function handlePut($conn) {
 
 // DELETE with body: code=abc123
 function handleDelete($conn) {
-    parse_str(file_get_contents("php://input"), $input);
+    $input = json_decode(file_get_contents("php://input"), true);
 
     if (empty($input['code'])) {
         http_response_code(400);
