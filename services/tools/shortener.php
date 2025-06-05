@@ -45,7 +45,7 @@ function handleGet($conn) {
 
 function handleRedirect($conn) {
     $code = $_GET['code'];
-    $stmt = $conn->prepare("CALL short_link_get(?)");
+    $stmt = $conn->prepare("SELECT original_link FROM short_links WHERE link = ? AND isDeleted = 0");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
     $stmt->bind_param("s", $code);
@@ -66,11 +66,10 @@ function handleUserLinks($conn) {
     $username = $_GET['username'];
     if ($username === '') {
         authorize(8, [], [], null);
-
-        $stmt = $conn->prepare("SELECT * FROM short_links");
+        $stmt = $conn->prepare("SELECT * FROM short_links WHERE isDeleted = 0");
     } else {
         authorize(9, [], [], $username);
-        $stmt = $conn->prepare("SELECT * FROM short_links WHERE created_by = ?");
+        $stmt = $conn->prepare("SELECT * FROM short_links WHERE created_by = ? AND isDeleted = 0");
     }
 
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
@@ -92,8 +91,6 @@ function handleUserLinks($conn) {
     $stmt->close();
 }
 
-
-
 // POST with JSON: { "code": "abc123", "original_link": "https://example.com" }
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
@@ -111,7 +108,7 @@ function handlePost($conn) {
     $code = $input['code'];
     $original_link = $input['original_link'];
 
-    // Step 1: Check if code already exists
+    // Step 1: Check if code already exists (including soft-deleted)
     $checkStmt = $conn->prepare("SELECT * FROM short_links WHERE link = ?");
     if (!$checkStmt) throw new Exception("Prepare failed: " . $conn->error);
 
@@ -120,14 +117,35 @@ function handlePost($conn) {
     $result = $checkStmt->get_result();
 
     if ($result && $row = $result->fetch_assoc()) {
-        // Code already exists
-        echo json_encode([
-            'status' => 0,
-            'message' => 'Short link already exists.',
-            'data' => $row
-        ]);
         $checkStmt->close();
-        return;
+
+        if ($row['isDeleted'] == 0) {
+            // Code exists and is active
+            echo json_encode([
+                'status' => 0,
+                'message' => 'Short link already exists.',
+                'data' => $row
+            ]);
+            return;
+        } else {
+            // Restore soft-deleted link
+            $restoreStmt = $conn->prepare("UPDATE short_links SET original_link = ?, created_by = ?, isDeleted = 0 WHERE link = ?");
+            if (!$restoreStmt) throw new Exception("Prepare failed: " . $conn->error);
+
+            $restoreStmt->bind_param("sss", $original_link, $username, $code);
+            if (!$restoreStmt->execute()) throw new Exception("Execute failed: " . $restoreStmt->error);
+
+            echo json_encode([
+                'status' => 2,
+                'message' => 'Soft-deleted link restored.',
+                'data' => [
+                    'code' => $code,
+                    'original_link' => $original_link,
+                ]
+            ]);
+            $restoreStmt->close();
+            return;
+        }
     }
     $checkStmt->close();
 
@@ -193,7 +211,7 @@ function handleDelete($conn) {
     $username = $user['username'] ?? null;
 
     // Ambil created_by dari DB
-    $checkStmt = $conn->prepare("SELECT created_by FROM short_links WHERE link = ?");
+    $checkStmt = $conn->prepare("SELECT created_by FROM short_links WHERE link = ? AND isDeleted = 0");
     if (!$checkStmt) throw new Exception("Prepare failed: " . $conn->error);
 
     $checkStmt->bind_param("s", $code);
@@ -214,7 +232,7 @@ function handleDelete($conn) {
     authorize(9, [], [], $created_by);
 
     // DELETE hanya jika user pemilik
-    $stmt = $conn->prepare("DELETE FROM short_links WHERE link = ? AND created_by = ?");
+    $stmt = $conn->prepare("UPDATE short_links SET isDeleted = 1 WHERE link = ? AND created_by = ?");
     if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
 
     $stmt->bind_param("ss", $code, $username); // bind 2 params
