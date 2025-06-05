@@ -16,7 +16,7 @@ $allowed_startswith = [
 
 $request = $_GET['request'] ?? '';
 $subroute = preg_replace('#^' . preg_quote($prefix, '#') . '/#', '', $request);
-
+echo json_encode($subroute)
 // Direct match
 if (isset($allowed_routes[$request])) {
     require $allowed_routes[$request];
