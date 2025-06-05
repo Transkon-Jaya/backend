@@ -7,21 +7,15 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 
 header('Content-Type: application/json');
 
-$prefix = 'hr'; // No slash, because we're matching 'hr' as prefix
-echo json_encode("hr.php\n");
+$prefix = 'hr/';
 
 $allowed_routes = [
-    'timeoff' => 'services/hr/timeoff.php',
+    'timeoff' => __DIR__ 'timeoff.php',
 ];
 
 $request = $_GET['request'] ?? '';
-echo json_encode("Request: $request\n");
+$subroute = preg_replace('#^' . preg_quote($prefix, '#') . '#', '', $request);
 
-// Remove 'hr/' from the beginning of the request
-$subroute = preg_replace('#^' . preg_quote($prefix, '#') . '/#', '', $request);
-echo json_encode("Subroute: $subroute\n");
-
-// Direct match to subroute
 if (isset($allowed_routes[$subroute])) {
     require $allowed_routes[$subroute];
 } else {
