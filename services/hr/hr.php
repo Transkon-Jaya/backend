@@ -15,6 +15,7 @@ $allowed_startswith = [
 ];
 
 $request = $_GET['request'] ?? '';
+echo json_encode($request)
 $subroute = preg_replace('#^' . preg_quote($prefix, '#') . '/#', '', $request);
 echo json_encode($subroute)
 // Direct match
