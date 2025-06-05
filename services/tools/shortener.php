@@ -129,7 +129,7 @@ function handlePost($conn) {
             return;
         } else {
             // Restore soft-deleted link
-            $restoreStmt = $conn->prepare("UPDATE short_links SET original_link = ?, created_by = ?, isDeleted = 0 WHERE link = ?");
+            $restoreStmt = $conn->prepare("UPDATE short_links SET original_link = ?, created_by = ?, isDeleted = 0, access_count = 0, lastAccessed = NULL WHERE link = ?");
             if (!$restoreStmt) throw new Exception("Prepare failed: " . $conn->error);
 
             $restoreStmt->bind_param("sss", $original_link, $username, $code);
