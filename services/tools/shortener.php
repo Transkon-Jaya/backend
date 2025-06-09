@@ -240,7 +240,7 @@ function handlePut($conn) {
 function handleDelete($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     
-    echo json_encode($input);
+    // echo json_encode($input);
 
     if (empty($input['code'])) {
         http_response_code(400);
