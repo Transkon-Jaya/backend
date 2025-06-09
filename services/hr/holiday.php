@@ -3,8 +3,8 @@
 require 'db.php';
 require 'auth.php';
 header('Content-Type: application/json');
-
 $method = $_SERVER['REQUEST_METHOD'];
+echo json_encode("asdf")
 
 try {
     switch ($method) {
