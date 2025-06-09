@@ -15,10 +15,10 @@ try {
             break;
         case 'PUT':
             handlePut($conn);
-            break;
-        case 'DELETE':
-            handleDelete($conn);
-            break;
+        //     break;
+        // case 'DELETE':
+        //     handleDelete($conn, null);
+        //     break;
         default:
             http_response_code(405);
             echo json_encode(['error' => 'Method not allowed']);
@@ -135,7 +135,7 @@ function handleUserLinks($conn) {
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     if($input['isDeleting'] == 1){
-        return handleDelete($conn);
+        return handleDelete($conn, $input);
     }
     if (empty($input['code']) || empty($input['original_link'])) {
         http_response_code(400);
@@ -237,10 +237,10 @@ function handlePut($conn) {
 }
 
 // DELETE with body: code=abc123
-function handleDelete($conn) {
-    $input = json_decode(file_get_contents("php://input"), true);
+function handleDelete($conn, $input) {
+    // $input = json_decode(file_get_contents("php://input"), true);
     
-    // echo json_encode($input);
+    echo json_encode($input);
 
     if (empty($input['code'])) {
         http_response_code(400);
