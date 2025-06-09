@@ -44,12 +44,29 @@ function handleGet($conn) {
 
 
 function handleRedirect($conn) {
+    if (!isset($_GET['code']) || empty($_GET['code'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing or empty code parameter.']);
+        return;
+    }
+
     $code = $_GET['code'];
+
+    // 1. Retrieve original link
     $stmt = $conn->prepare("SELECT original_link FROM short_links WHERE link = ? AND isDeleted = 0");
-    if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error (prepare failed).']);
+        return;
+    }
 
     $stmt->bind_param("s", $code);
-    if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
+    if (!$stmt->execute()) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error (execute failed).']);
+        $stmt->close();
+        return;
+    }
 
     $result = $stmt->get_result();
     if ($result && $row = $result->fetch_assoc()) {
@@ -57,14 +74,33 @@ function handleRedirect($conn) {
     } else {
         http_response_code(404);
         echo json_encode(['error' => 'Link not found or expired.']);
+        $stmt->close();
+        return;
     }
-    $stmt = $conn->prepare("UPDATE short_links SET access_count = access_count + 1 WHERE link = ? AND isDeleted = 0");
-    if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
+
+    $stmt->close();
+
+    // 2. Update access_count and lastAccessed timestamp
+    $stmt = $conn->prepare("
+        UPDATE short_links 
+        SET access_count = access_count + 1, lastAccessed = NOW() 
+        WHERE link = ? AND isDeleted = 0
+    ");
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error (prepare failed on update).']);
+        return;
+    }
+
     $stmt->bind_param("s", $code);
-    if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
+    if (!$stmt->execute()) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error (execute failed on update).']);
+    }
 
     $stmt->close();
 }
+
 
 function handleUserLinks($conn) {
     $username = $_GET['username'];
@@ -201,6 +237,8 @@ function handlePut($conn) {
 // DELETE with body: code=abc123
 function handleDelete($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
+    
+    echo json_encode($input);
 
     if (empty($input['code'])) {
         http_response_code(400);
