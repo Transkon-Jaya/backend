@@ -236,7 +236,7 @@ function handlePut($conn) {
 // DELETE with body: code=abc123
 function handleDelete($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
-
+    echo json_encode($input)
     if (empty($input['code'])) {
         http_response_code(400);
         echo json_encode(['error' => 'Missing short link code.']);
