@@ -10,6 +10,7 @@ $subroute = preg_replace('#^hr/#', '', $request);
 
 $allowed_routes = [
     'timeoff' => __DIR__ 'timeoff.php',
+    'holiday' => __DIR__ 'holiday.php',
 ];
 
 $allowed_startswith = [
