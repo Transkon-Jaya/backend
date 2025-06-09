@@ -8,9 +8,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     switch ($method) {
-        // case 'GET':
-        //     handleGet($conn);
-        //     break;
+        case 'GET':
+            handleGet($conn);
+            break;
         case 'POST':
             handlePost($conn);
             break;
