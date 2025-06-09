@@ -17,7 +17,7 @@ try {
             handlePut($conn);
             break;
         case 'DELETE':
-            handleDelete($conn, null);
+            handleDelete($conn);
             break;
         default:
             http_response_code(405);
@@ -135,7 +135,7 @@ function handleUserLinks($conn) {
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     if($input['isDeleting'] == 1){
-        return handleDelete($conn, $input);
+        return handleDelete($conn);
     }
     if (empty($input['code']) || empty($input['original_link'])) {
         http_response_code(400);
@@ -237,7 +237,7 @@ function handlePut($conn) {
 }
 
 // DELETE with body: code=abc123
-function handleDelete($conn, $input) {
+function handleDelete($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     
     echo json_encode($input);
