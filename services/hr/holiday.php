@@ -32,6 +32,29 @@ try {
     $conn->close();
 }
 
+function handleGet($conn) {
+    $query = "SELECT id, holiday_date, name, type, is_recurring, day_of_week FROM holidays";
+    $result = $conn->query($query);
+    
+    if (!$result) {
+        throw new Exception("Failed to fetch holidays: " . $conn->error);
+    }
+    
+    $holidays = [];
+    while ($row = $result->fetch_assoc()) {
+        $holidays[] = [
+            'id' => (int)$row['id'],
+            'holiday_date' => $row['holiday_date'],
+            'name' => $row['name'],
+            'type' => $row['type'],
+            'is_recurring' => (bool)$row['is_recurring'],
+            'day_of_week' => $row['day_of_week'] !== null ? (int)$row['day_of_week'] : null
+        ];
+    }
+    
+    echo json_encode($holidays);
+}
+
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
     
