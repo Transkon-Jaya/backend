@@ -24,7 +24,6 @@ function dynamicUpdate(string $table, array $data, $id, string $idColumn = 'id')
 }
 
 function dynamicInsert(string $table, array $data) {
-    echo json_encode("")
     global $conn;
 
     $columns = array_keys($data);
