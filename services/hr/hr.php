@@ -7,7 +7,9 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 
 $request = $_GET['request'] ?? '';
 $subroute = preg_replace('#^hr/#', '', $request);
-echo json_encode($subroute)
+
+echo json_encode($subroute);
+
 $allowed_routes = [
     'timeoff' => 'services/hr/timeoff.php',
     'holiday' => 'services/hr/holiday.php',
@@ -16,17 +18,16 @@ $allowed_routes = [
 $allowed_startswith = [
     'chart' => 'services/chart.php',
     'dropdowns' => 'services/dropdowns.php',
-    'get'   => 'services/get.php',
-    'data'  => 'services/data.php'
+    'get' => 'services/get.php',
+    'data' => 'services/data.php'
 ];
 
+// Match full subroute (e.g. "timeoff" from "hr/timeoff")
+if (isset($allowed_routes[$subroute])) {
+    require $allowed_routes[$subroute];
 
-if (isset($allowed_routes[$request])) {
-    require $allowed_routes[$request];
-
-// Regex match for scalable prefixes
 } elseif (preg_match('#^([a-zA-Z0-9_-]+)(/.*)?$#', $request, $matches)) {
-    $prefix = $matches[1]; // 'dropdowns', 'uploads', etc.
+    $prefix = $matches[1];
 
     if (isset($allowed_startswith[$prefix])) {
         require $allowed_startswith[$prefix];
@@ -45,4 +46,3 @@ if (isset($allowed_routes[$request])) {
         'error' => "Invalid API endpoint: $request"
     ]);
 }
-
