@@ -56,7 +56,6 @@ function handleGet($conn) {
 
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
-    echo json_encode($input);
     
     // Validate required fields
     if (empty($input['name']) || empty($input['holiday_date'])) {
@@ -70,21 +69,17 @@ function handlePost($conn) {
     // Prepare statement
     $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring) 
                            VALUES (?, ?, ?, ?)");
-    echo json_encode("B");
     $stmt->bind_param("sssi", 
         $input['holiday_date'],
         $input['name'],
         $type,
         $is_recurring
     );
-    echo json_encode("3");
     if (!$stmt->execute()) {
         throw new Exception("Failed to create holiday: " . $stmt->error);
     }
-    echo json_encode("4");
     // Return the created holiday
     $newId = $stmt->insert_id;
-    echo json_encode($newId);
     $stmt->close();
     
     $result = $conn->query("SELECT * FROM holiday WHERE id = $newId");
