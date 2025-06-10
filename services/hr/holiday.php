@@ -56,7 +56,7 @@ function handleGet($conn) {
 
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
-    echo json_encode("handlePost");
+    echo json_encode("1");
     
     // Validate required fields
     if (empty($input['name']) || empty($input['holiday_date'])) {
@@ -74,11 +74,11 @@ function handlePost($conn) {
         $input['type'] ?? null,
         $input['is_recurring'] ?? 0
     );
-    
+    echo json_encode("3");
     if (!$stmt->execute()) {
         throw new Exception("Failed to create holiday: " . $stmt->error);
     }
-    echo json_encode("done");
+    echo json_encode("4");
     // Return the created holiday
     $newId = $stmt->insert_id;
     echo json_encode($newId);
