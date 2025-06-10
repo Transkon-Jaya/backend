@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 $request = $_GET['request'] ?? '';
 $subroute = preg_replace('#^hr/#', '', $request);
 
-echo json_encode($subroute);
+// echo json_encode($subroute);
 
 $allowed_routes = [
     'timeoff' => 'services/hr/timeoff.php',

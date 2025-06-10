@@ -2,6 +2,8 @@
 <?php
 require 'db.php';
 require 'auth.php';
+require 'utils/mapRowWithCasts.php';
+
 header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -39,17 +41,14 @@ function handleGet($conn) {
     if (!$result) {
         throw new Exception("Failed to fetch holidays: " . $conn->error);
     }
-    
+    $casts = [
+        // 'id' => 'int',
+        // 'is_recurring' => 'bool',
+        // 'day_of_week' => 'nullable_int'
+    ];
     $holidays = [];
     while ($row = $result->fetch_assoc()) {
-        $holidays[] = [
-            'id' => (int)$row['id'],
-            'holiday_date' => $row['holiday_date'],
-            'name' => $row['name'],
-            'type' => $row['type'],
-            'is_recurring' => (bool)$row['is_recurring'],
-            'day_of_week' => $row['day_of_week'] !== null ? (int)$row['day_of_week'] : null
-        ];
+        $holidays[] = mapRowWithCasts($row)
     }
     
     echo json_encode($holidays);
