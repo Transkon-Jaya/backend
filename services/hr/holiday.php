@@ -77,9 +77,10 @@ function handlePost($conn) {
     if (!$stmt->execute()) {
         throw new Exception("Failed to create holiday: " . $stmt->error);
     }
-    
+    echo json_encode("done");
     // Return the created holiday
     $newId = $stmt->insert_id;
+    echo json_encode($newId);
     $stmt->close();
     
     $result = $conn->query("SELECT * FROM holiday WHERE id = $newId");
