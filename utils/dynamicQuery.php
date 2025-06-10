@@ -1,5 +1,5 @@
 <?php
-require 'db.php';
+require_once 'db.php';
 
 function dynamicUpdate(string $table, array $data, $id, string $idColumn = 'id') {
     global $conn;
@@ -75,7 +75,7 @@ function dynamicSelect(string $table, array $conditions = []) {
         $sql .= " WHERE " . implode(' AND ', $whereClauses);
     }
     echo json_encode($sql);
-    
+
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
