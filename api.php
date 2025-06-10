@@ -45,7 +45,6 @@ $allowed_startswith = [
 ];
 
 $request = $_GET['request'] ?? '';
-echo json_encode($request)
 // Direct match
 if (isset($allowed_routes[$request])) {
     require $allowed_routes[$request];
