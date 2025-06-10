@@ -40,7 +40,8 @@ $idColumn = 'id';
 function handleGet() {
     global $table;
 
-    $conditions = $_GET; // support query like ?a=value
+    $conditions = $_GET;
+    unset($conditions['request']);
     echo json_encode($conditions);
     $data = dynamicSelect($table, $conditions);
     echo json_encode(['success' => true, 'data' => $data]);
