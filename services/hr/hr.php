@@ -14,6 +14,7 @@ $allowed_routes = [
     'timeoff' => 'services/hr/timeoff.php',
     'holiday' => 'services/hr/holiday.php',
     'holidays' => 'services/hr/holidays.php',
+    'test' => 'services/hr/test.php',
 ];
 
 $allowed_startswith = [
