@@ -1,4 +1,3 @@
-
 <?php
 require_once 'db.php';
 require_once 'auth.php';
@@ -7,6 +6,9 @@ require_once 'utils/dynamicQuery.php';
 
 header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
+
+$table = 'test';
+$idColumn = 'id';
 
 try {
     switch ($method) {
@@ -34,28 +36,63 @@ try {
     $conn->close();
 }
 
-$table = 'test';
-$idColumn = 'id';
-
 function handleGet() {
     global $table;
 
     $conditions = $_GET;
     unset($conditions['request']);
-    echo json_encode($conditions);
     $data = dynamicSelect($table, $conditions);
     echo json_encode(['success' => true, 'data' => $data]);
 }
 
 function handlePost() {
-    echo json_encode("handlePost");
+    global $table;
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    unset($data['request']);
+    $insertedId = dynamicInsert($table, $data);
+    echo json_encode(['success' => true, 'id' => $insertedId]);
 }
 
 function handlePut() {
-    echo json_encode("handlePut");
+    global $table, $idColumn;
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    unset($data['request']);
+
+    if (!isset($data[$idColumn])) {
+        http_response_code(400);
+        echo json_encode(['error' => "Missing required field: $idColumn"]);
+        return;
+    }
+
+    $id = $data[$idColumn];
+    unset($data[$idColumn]);
+
+    $affected = dynamicUpdate($table, $data, $id, $idColumn);
+    echo json_encode(['success' => true, 'updated_rows' => $affected]);
 }
 
 function handleDelete() {
-    echo json_encode("handleDelete");
-}
+    global $conn, $table, $idColumn;
 
+    $data = json_decode(file_get_contents('php://input'), true);
+    unset($data['request']);
+
+    if (!isset($data[$idColumn])) {
+        http_response_code(400);
+        echo json_encode(['error' => "Missing required field: $idColumn"]);
+        return;
+    }
+
+    $id = $data[$idColumn];
+    $sql = "DELETE FROM `$table` WHERE `$idColumn` = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+
+    if (!$stmt->execute()) {
+        throw new Exception("Delete failed: " . $stmt->error);
+    }
+
+    echo json_encode(['success' => true, 'deleted_rows' => $stmt->affected_rows]);
+}
