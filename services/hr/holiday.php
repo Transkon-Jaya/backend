@@ -65,14 +65,13 @@ function handlePost($conn) {
     }
     
     // Prepare statement
-    $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring, day_of_week) 
-                           VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssii", 
+    $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring) 
+                           VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("sssi", 
         $input['holiday_date'],
         $input['name'],
         $input['type'] ?? null,
-        $input['is_recurring'] ?? 0,
-        $input['day_of_week'] ?? null
+        $input['is_recurring'] ?? 0
     );
     
     if (!$stmt->execute()) {
