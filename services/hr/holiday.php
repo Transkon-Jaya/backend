@@ -32,7 +32,7 @@ try {
 }
 
 function handleGet($conn) {
-    $query = "SELECT id, holiday_date, name, type, is_recurring, day_of_week FROM holidays";
+    $query = "SELECT id, holiday_date, name, type, is_recurring, day_of_week FROM holiday";
     $result = $conn->query($query);
     
     if (!$result) {
@@ -65,7 +65,7 @@ function handlePost($conn) {
     }
     
     // Prepare statement
-    $stmt = $conn->prepare("INSERT INTO holidays (holiday_date, name, type, is_recurring, day_of_week) 
+    $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, name, type, is_recurring, day_of_week) 
                            VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssii", 
         $input['holiday_date'],
@@ -83,7 +83,7 @@ function handlePost($conn) {
     $newId = $stmt->insert_id;
     $stmt->close();
     
-    $result = $conn->query("SELECT * FROM holidays WHERE id = $newId");
+    $result = $conn->query("SELECT * FROM holiday WHERE id = $newId");
     echo json_encode($result->fetch_assoc());
 }
 
@@ -121,7 +121,7 @@ function handlePut($conn) {
     $params[] = $input['id'];
     $types .= 'i';
     
-    $query = "UPDATE holidays SET " . implode(', ', $updates) . " WHERE id = ?";
+    $query = "UPDATE holiday SET " . implode(', ', $updates) . " WHERE id = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param($types, ...$params);
     
@@ -132,7 +132,7 @@ function handlePut($conn) {
     $stmt->close();
     
     // Return the updated holiday
-    $result = $conn->query("SELECT * FROM holidays WHERE id = " . $input['id']);
+    $result = $conn->query("SELECT * FROM holiday WHERE id = " . $input['id']);
     echo json_encode($result->fetch_assoc());
 }
 
@@ -146,7 +146,7 @@ function handleDelete($conn) {
     }
     
     // First get the holiday being deleted to return it
-    $result = $conn->query("SELECT * FROM holidays WHERE id = " . $input['id']);
+    $result = $conn->query("SELECT * FROM holiday WHERE id = " . $input['id']);
     $holiday = $result->fetch_assoc();
     
     if (!$holiday) {
@@ -156,7 +156,7 @@ function handleDelete($conn) {
     }
     
     // Perform deletion
-    $stmt = $conn->prepare("DELETE FROM holidays WHERE id = ?");
+    $stmt = $conn->prepare("DELETE FROM holiday WHERE id = ?");
     $stmt->bind_param("i", $input['id']);
     
     if (!$stmt->execute()) {
