@@ -48,7 +48,7 @@ function handleGet($conn) {
     ];
     $holidays = [];
     while ($row = $result->fetch_assoc()) {
-        $holidays[] = mapRowWithCasts($row)
+        $holidays[] = mapRowWithCasts($row, $casts);
     }
     
     echo json_encode($holidays);
