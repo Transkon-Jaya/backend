@@ -41,7 +41,7 @@ function handleGet() {
     global $table;
 
     $conditions = $_GET; // support query like ?a=value
-    $data = dynamicSelect($conn, $table, $conditions);
+    $data = dynamicSelect($table, $conditions);
     echo json_encode(['success' => true, 'data' => $data]);
 }
 

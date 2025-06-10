@@ -39,7 +39,7 @@ function dynamicInsert(string $table, array $data) {
     return $conn->lastInsertId();
 }
 
-function dynamicSelect(string $table, array $conditions = [], string $idColumn = 'id') {
+function dynamicSelect(string $table, array $conditions = []) {
     global $conn;
 
     $whereClauses = [];
