@@ -65,7 +65,7 @@ function handlePost($conn) {
     }
     
     // Prepare statement
-    $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, name, type, is_recurring, day_of_week) 
+    $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring, day_of_week) 
                            VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("sssii", 
         $input['holiday_date'],
