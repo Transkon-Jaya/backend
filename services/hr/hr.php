@@ -7,14 +7,13 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 
 $request = $_GET['request'] ?? '';
 $subroute = preg_replace('#^hr/#', '', $request);
-
+echo json_encode($subroute)
 $allowed_routes = [
     'timeoff' => 'services/hr/timeoff.php',
     'holiday' => 'services/hr/holiday.php',
 ];
 
 $allowed_startswith = [
-    'hr' => 'services/hr/hr.php',
     'chart' => 'services/chart.php',
     'dropdowns' => 'services/dropdowns.php',
     'get'   => 'services/get.php',
