@@ -24,6 +24,7 @@ function dynamicUpdate(string $table, array $data, $id, string $idColumn = 'id')
 }
 
 function dynamicInsert(string $table, array $data) {
+    echo json_encode("")
     global $conn;
 
     $columns = array_keys($data);
@@ -55,6 +56,7 @@ function dynamicSelect(string $table, array $conditions = []) {
     if (!empty($whereClauses)) {
         $sql .= " WHERE " . implode(' AND ', $whereClauses);
     }
+    echo json_encode($sql);
 
     $stmt = $conn->prepare($sql);
     if (!$stmt->execute($values)) {
