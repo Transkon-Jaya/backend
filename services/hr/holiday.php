@@ -56,6 +56,7 @@ function handleGet($conn) {
 
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
+    echo json_encode("handlePost");
     
     // Validate required fields
     if (empty($input['name']) || empty($input['holiday_date'])) {
