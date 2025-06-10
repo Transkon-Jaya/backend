@@ -64,7 +64,7 @@ function handlePost($conn) {
         echo json_encode(['error' => 'Missing required fields']);
         return;
     }
-    $type = $input["type"] ?? null;
+    $type = $input["type"] ?? "";
     
     // Prepare statement
     $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring) 
