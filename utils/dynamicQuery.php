@@ -41,8 +41,9 @@ function dynamicInsert(string $table, array $data) {
 }
 
 function dynamicSelect(string $table, array $conditions = []) {
+    echo json_encode("a");
     global $conn;
-
+    echo json_encode("a");
     $whereClauses = [];
     $values = [];
 
@@ -50,6 +51,7 @@ function dynamicSelect(string $table, array $conditions = []) {
         $whereClauses[] = "`$key` = ?";
         $values[] = $value;
     }
+    echo json_encode("a");
 
     $sql = "SELECT * FROM `$table`";
     if (!empty($whereClauses)) {
