@@ -6,21 +6,29 @@ function dynamicUpdate(string $table, array $data, $id, string $idColumn = 'id')
 
     $fields = [];
     $values = [];
+    $types = '';
 
     foreach ($data as $key => $value) {
         $fields[] = "`$key` = ?";
         $values[] = $value;
+        $types .= is_int($value) ? 'i' : 's'; // adjust as needed
     }
 
-    $values[] = $id; // for WHERE clause
+    $values[] = $id;
+    $types .= is_int($id) ? 'i' : 's';
+
     $sql = "UPDATE `$table` SET " . implode(', ', $fields) . " WHERE `$idColumn` = ?";
-
     $stmt = $conn->prepare($sql);
-    if (!$stmt->execute($values)) {
-        throw new Exception("Update failed: " . implode(', ', $stmt->errorInfo()));
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
     }
 
-    return $stmt->rowCount();
+    $stmt->bind_param($types, ...$values);
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
+    return $stmt->affected_rows;
 }
 
 function dynamicInsert(string $table, array $data) {
@@ -29,40 +37,57 @@ function dynamicInsert(string $table, array $data) {
     $columns = array_keys($data);
     $placeholders = array_fill(0, count($data), '?');
     $values = array_values($data);
+    $types = '';
 
-    $sql = "INSERT INTO `$table` (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
-    echo json_encode($sql);
-    $stmt = $conn->prepare($sql);
-    if (!$stmt->execute($values)) {
-        throw new Exception("Insert failed: " . implode(', ', $stmt->errorInfo()));
+    foreach ($values as $value) {
+        $types .= is_int($value) ? 'i' : 's'; // basic type check
     }
 
-    return $conn->lastInsertId();
+    $sql = "INSERT INTO `$table` (`" . implode('`, `', $columns) . "`) VALUES (" . implode(', ', $placeholders) . ")";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $stmt->bind_param($types, ...$values);
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
+    return $conn->insert_id;
 }
 
 function dynamicSelect(string $table, array $conditions = []) {
-    echo json_encode("a");
     global $conn;
-    echo json_encode("a");
+
     $whereClauses = [];
     $values = [];
+    $types = '';
 
     foreach ($conditions as $key => $value) {
         $whereClauses[] = "`$key` = ?";
         $values[] = $value;
+        $types .= is_int($value) ? 'i' : 's';
     }
-    echo json_encode("a");
 
     $sql = "SELECT * FROM `$table`";
     if (!empty($whereClauses)) {
         $sql .= " WHERE " . implode(' AND ', $whereClauses);
     }
-    echo json_encode($sql);
 
     $stmt = $conn->prepare($sql);
-    if (!$stmt->execute($values)) {
-        throw new Exception("Select failed: " . implode(', ', $stmt->errorInfo()));
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
     }
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($values)) {
+        $stmt->bind_param($types, ...$values);
+    }
+
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
+    $result = $stmt->get_result();
+    return $result->fetch_all(MYSQLI_ASSOC);
 }
