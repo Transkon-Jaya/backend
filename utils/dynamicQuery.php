@@ -74,7 +74,6 @@ function dynamicSelect(string $table, array $conditions = []) {
     if (!empty($whereClauses)) {
         $sql .= " WHERE " . implode(' AND ', $whereClauses);
     }
-    echo json_encode($sql);
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
