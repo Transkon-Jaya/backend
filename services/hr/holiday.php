@@ -64,6 +64,7 @@ function handlePost($conn) {
         echo json_encode(['error' => 'Missing required fields']);
         return;
     }
+    $type = $input["type"] ?? null;
     
     // Prepare statement
     $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring) 
@@ -72,7 +73,7 @@ function handlePost($conn) {
     $stmt->bind_param("sssi", 
         $input['holiday_date'],
         $input['name'],
-        $input['type'] ?? null,
+        $type,
         $input['is_recurring'] ?? 0
     );
     echo json_encode("3");
