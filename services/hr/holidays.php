@@ -26,14 +26,14 @@ try {
 
 function handleGet($conn) {
     // $query = "SELECT id, holiday_date, name, type, is_recurring, day_of_week FROM holiday";
-    $query = "SELECT * FROM calendar_dates WHERE id_holiday >= 0";
+    $query = "SELECT * FROM view_calendar_with_holidays";
     $result = $conn->query($query);
     
     if (!$result) {
         throw new Exception("Failed to fetch holidays: " . $conn->error);
     }
     $casts = [
-        // 'id' => 'int',
+        'id' => 'int',
         'is_recurring' => 'bool',
         // 'day_of_week' => 'nullable_int'
     ];
