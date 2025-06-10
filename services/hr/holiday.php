@@ -32,7 +32,8 @@ try {
 }
 
 function handleGet($conn) {
-    $query = "SELECT id, holiday_date, name, type, is_recurring, day_of_week FROM holiday";
+    // $query = "SELECT id, holiday_date, name, type, is_recurring, day_of_week FROM holiday";
+    $query = "SELECT * FROM calendar_dates WHERE id_holiday >= 0"
     $result = $conn->query($query);
     
     if (!$result) {
