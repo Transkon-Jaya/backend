@@ -1,9 +1,9 @@
 
 <?php
-require 'db.php';
-require 'auth.php';
-require 'utils/mapRowWithCasts.php';
-require 'utils/dynamicQuery.php';
+require_once 'db.php';
+require_once 'auth.php';
+require_once 'utils/mapRowWithCasts.php';
+require_once 'utils/dynamicQuery.php';
 
 header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
