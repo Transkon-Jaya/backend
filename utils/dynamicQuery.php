@@ -31,6 +31,7 @@ function dynamicInsert(string $table, array $data) {
     $values = array_values($data);
 
     $sql = "INSERT INTO `$table` (" . implode(', ', $columns) . ") VALUES (" . implode(', ', $placeholders) . ")";
+    echo json_encode($sql);
     $stmt = $conn->prepare($sql);
     if (!$stmt->execute($values)) {
         throw new Exception("Insert failed: " . implode(', ', $stmt->errorInfo()));
