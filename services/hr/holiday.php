@@ -69,7 +69,7 @@ function handlePost($conn) {
     // Prepare statement
     $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring) 
                            VALUES (?, ?, ?, ?)");
-    echo json_encode("2");
+    echo json_encode("B");
     $stmt->bind_param("sssi", 
         $input['holiday_date'],
         $input['name'],
