@@ -56,7 +56,7 @@ function handleGet($conn) {
 
 function handlePost($conn) {
     $input = json_decode(file_get_contents("php://input"), true);
-    echo json_encode("1");
+    echo json_encode($input);
     
     // Validate required fields
     if (empty($input['name']) || empty($input['holiday_date'])) {
@@ -65,6 +65,7 @@ function handlePost($conn) {
         return;
     }
     $type = $input["type"] ?? "";
+    $is_recurring = $input["is_recurring"] ?? 0;
     
     // Prepare statement
     $stmt = $conn->prepare("INSERT INTO holiday (holiday_date, `name`, `type`, is_recurring) 
@@ -74,7 +75,7 @@ function handlePost($conn) {
         $input['holiday_date'],
         $input['name'],
         $type,
-        $input['is_recurring'] ?? 0
+        $is_recurring
     );
     echo json_encode("3");
     if (!$stmt->execute()) {
