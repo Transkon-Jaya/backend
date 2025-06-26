@@ -3,6 +3,7 @@ header("Content-Type: application/json");
 require '../../db.php';
 require '../../auth.php';
 
+// Cek token dan hak akses
 authorize(5, ["admin_asset"], [], null);
 $user = verifyToken();
 $id_company = $user['id_company'] ?? null;
@@ -18,7 +19,7 @@ try {
     $conn->autocommit(FALSE);
 
     if ($id) {
-        // Mode: detail satu asset
+        // Ambil 1 detail aset
         $sql = "SELECT 
                     a.*, 
                     c.name as category_name,
@@ -29,13 +30,11 @@ try {
                 LEFT JOIN locations l ON a.location_id = l.id
                 LEFT JOIN departments d ON a.department_id = d.id
                 WHERE a.id = ?";
-        
+
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
-        
         $stmt->bind_param("i", $id);
-        if (!$stmt->execute()) throw new Exception("Execute failed: " . $stmt->error);
-
+        $stmt->execute();
         $result = $stmt->get_result();
         if ($result->num_rows === 0) throw new Exception("Asset not found", 404);
 
@@ -60,13 +59,10 @@ try {
         $asset['maintenance_history'] = $maintResult->fetch_all(MYSQLI_ASSOC);
 
         $conn->commit();
+        echo json_encode(["status" => 200, "data" => $asset]);
 
-        echo json_encode([
-            "status" => 200,
-            "data" => $asset
-        ]);
     } else {
-        // Mode: semua asset
+        // Ambil semua aset
         $sql = "SELECT 
                     a.*, 
                     c.name as category_name,
@@ -81,13 +77,13 @@ try {
         $result = $conn->query($sql);
         if (!$result) throw new Exception("Query failed: " . $conn->error);
 
-        $assets = $result->fetch_all(MYSQLI_ASSOC);
-        $conn->commit();
+        $assets = [];
+        while ($row = $result->fetch_assoc()) {
+            $assets[] = $row;
+        }
 
-        echo json_encode([
-            "status" => 200,
-            "data" => $assets
-        ]);
+        $conn->commit();
+        echo json_encode(["status" => 200, "data" => $assets]);
     }
 
 } catch (Exception $e) {
