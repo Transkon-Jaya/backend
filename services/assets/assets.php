@@ -27,8 +27,8 @@ try {
                     d.name as department_name
                 FROM assets a
                 LEFT JOIN asset_categories c ON a.category_id = c.id
-                LEFT JOIN locations l ON a.location_id = l.id
-                LEFT JOIN departments d ON a.department_id = d.id
+                LEFT JOIN asset_locations l ON a.location_id = l.id
+                LEFT JOIN asset_departments d ON a.department_id = d.id
                 WHERE a.id = ?";
 
         $stmt = $conn->prepare($sql);
@@ -70,8 +70,8 @@ try {
                     d.name as department_name
                 FROM assets a
                 LEFT JOIN asset_categories c ON a.category_id = c.id
-                LEFT JOIN locations l ON a.location_id = l.id
-                LEFT JOIN departments d ON a.department_id = d.id
+                LEFT JOIN asset_locations l ON a.location_id = l.id
+                LEFT JOIN asset_departments d ON a.department_id = d.id
                 ORDER BY a.id DESC";
 
         $result = $conn->query($sql);

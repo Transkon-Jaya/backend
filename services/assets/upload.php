@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
-require '../../db.php';
-require '../../auth.php';
+require 'db.php';
+require 'auth.php';
 
 // Authorize dengan level akses yang sesuai
 authorize(5, ["admin_asset"], [], null);
