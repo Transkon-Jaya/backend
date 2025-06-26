@@ -1,227 +1,92 @@
 <?php
-header('Content-Type: application/json');
-require_once '../../config/database.php';
-require_once '../../lib/jwt_utils.php';
+header("Content-Type: application/json");
+require '../../db.php';
+require '../../auth.php';
+
+// Authorize dengan level akses minimum 5 dan role admin_asset
+authorize(5, ["admin_asset"], [], null);
+$user = verifyToken();
+$id_company = $user['id_company'] ?? null;
 
 $method = $_SERVER['REQUEST_METHOD'];
+$id = $_GET['id'] ?? null;
 
-// Database connection
-$db = new Database();
-$pdo = $db->getConnection();
+try {
+    if ($method !== 'GET') {
+        throw new Exception("Method not allowed", 405);
+    }
 
-switch ($method) {
-    case 'GET':
-        // Get all assets or single asset
-        if (isset($_GET['id'])) {
-            $id = $_GET['id'];
-            $stmt = $pdo->prepare("
-                SELECT a.*, c.name as category_name, l.name as location_name 
-                FROM assets a
-                LEFT JOIN asset_categories c ON a.category_id = c.id
-                LEFT JOIN locations l ON a.location_id = l.id
-                WHERE a.id = ?
-            ");
-            $stmt->execute([$id]);
-            $asset = $stmt->fetch(PDO::FETCH_ASSOC);
+    $conn->autocommit(FALSE); // Start transaction
 
-            if ($asset) {
-                // Get specifications
-                $stmt = $pdo->prepare("SELECT spec_key, spec_value FROM asset_specifications WHERE asset_id = ?");
-                $stmt->execute([$id]);
-                $specs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                $asset['specifications'] = array_reduce($specs, function($carry, $item) {
-                    $carry[$item['spec_key']] = $item['spec_value'];
-                    return $carry;
-                }, []);
+    // Query utama asset
+    $sql = "SELECT 
+                a.*, 
+                c.name as category_name,
+                l.name as location_name,
+                d.name as department_name
+            FROM assets a
+            LEFT JOIN asset_categories c ON a.category_id = c.id
+            LEFT JOIN locations l ON a.location_id = l.id
+            LEFT JOIN departments d ON a.department_id = d.id
+            WHERE a.id = ?";
+    
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+    
+    $stmt->bind_param("i", $id);
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
 
-                echo json_encode($asset);
-            } else {
-                http_response_code(404);
-                echo json_encode(['error' => 'Asset not found']);
-            }
-        } else {
-            // Get all assets with filters
-            $filters = [];
-            $params = [];
-            
-            $sql = "
-                SELECT a.*, c.name as category_name, l.name as location_name 
-                FROM assets a
-                LEFT JOIN asset_categories c ON a.category_id = c.id
-                LEFT JOIN locations l ON a.location_id = l.id
-            ";
+    $result = $stmt->get_result();
+    if ($result->num_rows === 0) {
+        throw new Exception("Asset not found", 404);
+    }
 
-            if (isset($_GET['category'])) {
-                $filters[] = "a.category_id = ?";
-                $params[] = $_GET['category'];
-            }
+    $asset = $result->fetch_assoc();
 
-            if (isset($_GET['status'])) {
-                $filters[] = "a.status = ?";
-                $params[] = $_GET['status'];
-            }
+    // Query spesifikasi
+    $specStmt = $conn->prepare("SELECT spec_key, spec_value FROM asset_specifications WHERE asset_id = ?");
+    $specStmt->bind_param("i", $id);
+    if (!$specStmt->execute()) {
+        throw new Exception("Spec query failed: " . $specStmt->error);
+    }
 
-            if (isset($_GET['search'])) {
-                $filters[] = "(a.name LIKE ? OR a.code LIKE ?)";
-                $searchTerm = '%' . $_GET['search'] . '%';
-                $params[] = $searchTerm;
-                $params[] = $searchTerm;
-            }
+    $specResult = $specStmt->get_result();
+    $specs = [];
+    while ($row = $specResult->fetch_assoc()) {
+        $specs[$row['spec_key']] = $row['spec_value'];
+    }
+    $asset['specifications'] = $specs;
 
-            if (!empty($filters)) {
-                $sql .= " WHERE " . implode(" AND ", $filters);
-            }
+    // Query maintenance history
+    $maintStmt = $conn->prepare("SELECT * FROM maintenance_records WHERE asset_id = ? ORDER BY completion_date DESC");
+    $maintStmt->bind_param("i", $id);
+    if (!$maintStmt->execute()) {
+        throw new Exception("Maintenance query failed: " . $maintStmt->error);
+    }
 
-            $sql .= " ORDER BY a.created_at DESC";
+    $maintResult = $maintStmt->get_result();
+    $asset['maintenance_history'] = $maintResult->fetch_all(MYSQLI_ASSOC);
 
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
-            $assets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $conn->commit();
 
-            echo json_encode($assets);
-        }
-        break;
+    // Format response seperti contoh yang berhasil
+    echo json_encode([
+        "status" => 200,
+        "data" => $asset
+    ]);
 
-    case 'POST':
-        // Create new asset
-        $data = json_decode(file_get_contents("php://input"), true);
-        
-        try {
-            $pdo->beginTransaction();
-
-            // Insert asset
-            $stmt = $pdo->prepare("
-                INSERT INTO assets 
-                (code, name, description, category_id, status, purchase_date, 
-                 purchase_value, current_value, supplier, serial_number, 
-                 location_id, department_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([
-                $data['code'],
-                $data['name'],
-                $data['description'],
-                $data['category_id'],
-                $data['status'],
-                $data['purchase_date'],
-                $data['purchase_value'],
-                $data['current_value'],
-                $data['supplier'],
-                $data['serial_number'],
-                $data['location_id'],
-                $data['department_id']
-            ]);
-            $assetId = $pdo->lastInsertId();
-
-            // Insert specifications
-            if (!empty($data['specifications'])) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO asset_specifications 
-                    (asset_id, spec_key, spec_value)
-                    VALUES (?, ?, ?)
-                ");
-                
-                foreach ($data['specifications'] as $key => $value) {
-                    $stmt->execute([$assetId, $key, $value]);
-                }
-            }
-
-            $pdo->commit();
-            http_response_code(201);
-            echo json_encode(['message' => 'Asset created', 'id' => $assetId]);
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            http_response_code(400);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-        break;
-
-    case 'PUT':
-        // Update asset
-        $id = $_GET['id'];
-        $data = json_decode(file_get_contents("php://input"), true);
-        
-        try {
-            $pdo->beginTransaction();
-
-            // Update asset
-            $stmt = $pdo->prepare("
-                UPDATE assets SET
-                  code = ?, name = ?, description = ?, category_id = ?,
-                  status = ?, purchase_date = ?, purchase_value = ?,
-                  current_value = ?, supplier = ?, serial_number = ?,
-                  location_id = ?, department_id = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([
-                $data['code'],
-                $data['name'],
-                $data['description'],
-                $data['category_id'],
-                $data['status'],
-                $data['purchase_date'],
-                $data['purchase_value'],
-                $data['current_value'],
-                $data['supplier'],
-                $data['serial_number'],
-                $data['location_id'],
-                $data['department_id'],
-                $id
-            ]);
-
-            // Delete existing specifications
-            $stmt = $pdo->prepare("DELETE FROM asset_specifications WHERE asset_id = ?");
-            $stmt->execute([$id]);
-
-            // Insert updated specifications
-            if (!empty($data['specifications'])) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO asset_specifications 
-                    (asset_id, spec_key, spec_value)
-                    VALUES (?, ?, ?)
-                ");
-                
-                foreach ($data['specifications'] as $key => $value) {
-                    $stmt->execute([$id, $key, $value]);
-                }
-            }
-
-            $pdo->commit();
-            echo json_encode(['message' => 'Asset updated']);
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            http_response_code(400);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-        break;
-
-    case 'DELETE':
-        // Delete asset
-        $id = $_GET['id'];
-        
-        try {
-            $pdo->beginTransaction();
-
-            // Delete specifications first
-            $stmt = $pdo->prepare("DELETE FROM asset_specifications WHERE asset_id = ?");
-            $stmt->execute([$id]);
-
-            // Then delete asset
-            $stmt = $pdo->prepare("DELETE FROM assets WHERE id = ?");
-            $stmt->execute([$id]);
-
-            $pdo->commit();
-            echo json_encode(['message' => 'Asset deleted']);
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            http_response_code(400);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-        break;
-
-    default:
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed']);
-        break;
+} catch (Exception $e) {
+    $conn->rollback();
+    http_response_code($e->getCode() ?: 500);
+    echo json_encode([
+        "status" => $e->getCode() ?: 500,
+        "error" => $e->getMessage()
+    ]);
+} finally {
+    $conn->close();
 }
+?>
