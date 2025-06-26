@@ -1,10 +1,9 @@
 <?php
 header("Content-Type: application/json");
-require '../../config/db.php';       // Sesuaikan path jika berbeda
-require '../../config/auth.php';     // Atau letakkan sesuai kebutuhan
+require 'db.php';     
+require 'auth.php';     
 
-// Cek token dan hak akses
-authorize(5, ["admin_asset"], [], null); // Samakan dengan assets.php
+authorize(5, ["admin_asset"], [], null);
 $user = verifyToken();
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -14,7 +13,7 @@ try {
         throw new Exception("Method not allowed", 405);
     }
 
-    $conn->autocommit(FALSE);
+    $conn->autocommit(false);
 
     $sql = "SELECT id, name FROM asset_categories ORDER BY name ASC";
     $result = $conn->query($sql);
