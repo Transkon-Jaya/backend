@@ -13,6 +13,11 @@ if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
 
+$response = [
+    "status" => "error",
+    "message" => "Unknown error"
+];
+
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new Exception("Method not allowed", 405);
@@ -30,36 +35,38 @@ try {
     $assetId = (int)$_POST['asset_id'];
     $file = $_FILES['image'];
 
-    // Validasi tipe file
-    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (!in_array($file['type'], $allowedTypes)) {
+    // Validasi tipe file (diperbarui seperti profile.php)
+    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+    $fileType = mime_content_type($file['tmp_name']);
+    if (!in_array($fileType, $allowedTypes)) {
         throw new Exception("Hanya file JPEG, PNG, atau GIF yang diperbolehkan", 400);
     }
 
-    // Validasi ukuran file (max 2MB)
-    if ($file['size'] > 2 * 1024 * 1024) {
+    // Validasi ukuran file (diperbarui)
+    $maxSize = 2 * 1024 * 1024; // 2MB
+    if ($file['size'] > $maxSize) {
         throw new Exception("Ukuran file maksimal 2MB", 400);
     }
 
-    // Generate nama file unik
-    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = 'asset_' . $assetId . '_' . time() . '.' . $ext;
+    // Generate nama file (format diperbarui)
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $filename = 'asset_' . preg_replace('/[^a-zA-Z0-9]/', '_', $assetId) . '_' . time() . '.' . $ext;
     $uploadPath = $uploadDir . $filename;
 
-    // Kompresi dan resize gambar
+    // Kompresi dan resize gambar (parameter disesuaikan)
     $resizeResult = compressAndResizeImage(
         $file['tmp_name'], 
         $uploadPath, 
-        800,  // Lebar maksimal
-        800,  // Tinggi maksimal
-        75    // Kualitas (0-100)
+        500,  // Lebar maksimal (disamakan dengan profile.php)
+        500,  // Tinggi maksimal
+        80    // Kualitas (ditingkatkan dari 75)
     );
 
     if (!$resizeResult) {
         throw new Exception("Gagal memproses gambar", 500);
     }
 
-    // Update database
+    // Update database dengan transaksi (dipertahankan)
     $conn->autocommit(FALSE);
     
     $imagePath = 'uploads/assets/' . $filename;
@@ -72,21 +79,35 @@ try {
 
     $conn->commit();
 
-    // Response sukses
-    echo json_encode([
+    // Response sukses (format disesuaikan)
+    $response = [
         "status" => 200,
         "message" => "Gambar berhasil diupload",
-        "image_path" => $imagePath,
-        "file_name" => $filename
-    ]);
+        "data" => [
+            "image_url" => "https://www.transkon-rent.com/" . $imagePath,
+            "file_name" => $filename,
+            "timestamp" => time()
+        ]
+    ];
+
+    echo json_encode($response);
 
 } catch (Exception $e) {
+    // Error handling (diperbarui)
     if (isset($conn)) $conn->rollback();
-    http_response_code($e->getCode() ?: 500);
-    echo json_encode([
+    
+    $response = [
         "status" => $e->getCode() ?: 500,
-        "error" => $e->getMessage()
-    ]);
+        "error" => $e->getMessage(),
+        "debug" => [
+            "file" => $e->getFile(),
+            "line" => $e->getLine()
+        ]
+    ];
+
+    http_response_code($e->getCode() ?: 500);
+    echo json_encode($response);
+    
 } finally {
     if (isset($conn)) $conn->close();
 }
