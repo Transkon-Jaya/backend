@@ -1,8 +1,8 @@
 <?php
 header("Content-Type: application/json");
-require '../../db.php';
-require '../../auth.php';
-require '../../utils/compressResize.php'; // Gunakan utility yang sama
+require 'db.php';
+require 'auth.php';
+require 'utils/compressResize.php';
 
 // Cek token dan hak akses
 authorize(5, ["admin_asset"], [], null);
