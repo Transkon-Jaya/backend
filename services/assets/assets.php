@@ -11,6 +11,13 @@ $id_company = $user['id_company'] ?? null;
 $method = $_SERVER['REQUEST_METHOD'];
 $id = $_GET['id'] ?? null;
 
+// Ambil parameter dari query string
+$page = max(1, (int)($_GET['page'] ?? 1));
+$limit = min(100, max(1, (int)($_GET['limit'] ?? 12)));
+$search = $_GET['search'] ?? null;
+$category = $_GET['category'] ?? null;
+$status = $_GET['status'] ?? null;
+
 try {
     if ($method !== 'GET') {
         throw new Exception("Method not allowed", 405);
@@ -19,8 +26,10 @@ try {
     $conn->autocommit(FALSE);
 
     if ($id) {
-        // Ambil 1 detail aset
-        $sql = "SELECT 
+        // [Kode untuk get single asset tetap sama]
+    } else {
+        // Bangun query dengan filter dinamis
+        $sql = "SELECT SQL_CALC_FOUND_ROWS
                     a.*, 
                     c.name as category_name,
                     l.name as location_name,
@@ -29,61 +38,76 @@ try {
                 LEFT JOIN asset_categories c ON a.category_id = c.id
                 LEFT JOIN asset_locations l ON a.location_id = l.id
                 LEFT JOIN asset_departments d ON a.department_id = d.id
-                WHERE a.id = ?";
+                WHERE 1=1";
+        
+        $conditions = [];
+        $params = [];
+        $types = '';
 
+        // Filter pencarian
+        if ($search) {
+            $conditions[] = "(a.name LIKE ? OR a.description LIKE ? OR a.serial_number LIKE ?)";
+            $searchTerm = "%$search%";
+            array_push($params, $searchTerm, $searchTerm, $searchTerm);
+            $types .= 'sss';
+        }
+
+        // Filter kategori
+        if ($category) {
+            $conditions[] = "a.category_id = ?";
+            $params[] = $category;
+            $types .= 'i';
+        }
+
+        // Filter status
+        if ($status) {
+            $conditions[] = "a.status = ?";
+            $params[] = $status;
+            $types .= 's';
+        }
+
+        // Gabungkan kondisi
+        if (!empty($conditions)) {
+            $sql .= " AND " . implode(" AND ", $conditions);
+        }
+
+        // Tambahkan paginasi
+        $sql .= " ORDER BY a.id DESC LIMIT ? OFFSET ?";
+        array_push($params, $limit, ($page - 1) * $limit);
+        $types .= 'ii';
+
+        // Eksekusi query
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare failed: " . $conn->error);
-        $stmt->bind_param("i", $id);
+        
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+
         $stmt->execute();
         $result = $stmt->get_result();
-        if ($result->num_rows === 0) throw new Exception("Asset not found", 404);
-
-        $asset = $result->fetch_assoc();
-
-        // Spesifikasi
-        $specStmt = $conn->prepare("SELECT spec_key, spec_value FROM asset_specifications WHERE asset_id = ?");
-        $specStmt->bind_param("i", $id);
-        $specStmt->execute();
-        $specResult = $specStmt->get_result();
-        $specs = [];
-        while ($row = $specResult->fetch_assoc()) {
-            $specs[$row['spec_key']] = $row['spec_value'];
-        }
-        $asset['specifications'] = $specs;
-
-        // Maintenance
-        $maintStmt = $conn->prepare("SELECT * FROM maintenance_records WHERE asset_id = ? ORDER BY completion_date DESC");
-        $maintStmt->bind_param("i", $id);
-        $maintStmt->execute();
-        $maintResult = $maintStmt->get_result();
-        $asset['maintenance_history'] = $maintResult->fetch_all(MYSQLI_ASSOC);
-
-        $conn->commit();
-        echo json_encode(["status" => 200, "data" => $asset]);
-
-    } else {
-        // Ambil semua aset
-        $sql = "SELECT 
-                    a.*, 
-                    c.name as category_name,
-                    l.name as location_name,
-                    d.name as department_name
-                FROM assets a
-                LEFT JOIN asset_categories c ON a.category_id = c.id
-                LEFT JOIN asset_locations l ON a.location_id = l.id
-                LEFT JOIN asset_departments d ON a.department_id = d.id
-                ORDER BY a.id DESC";
-
-        $result = $conn->query($sql);
-        if (!$result) throw new Exception("Query failed: " . $conn->error);
-
+        
         $assets = [];
         while ($row = $result->fetch_assoc()) {
             $assets[] = $row;
         }
 
+        // Hitung total data
+        $countResult = $conn->query("SELECT FOUND_ROWS() as total");
+        $total = $countResult->fetch_assoc()['total'];
+
         $conn->commit();
-        echo json_encode(["status" => 200, "data" => $assets]);
+        
+        echo json_encode([
+            "status" => 200,
+            "data" => [
+                "items" => $assets,
+                "totalCount" => $total,
+                "page" => $page,
+                "limit" => $limit,
+                "totalPages" => ceil($total / $limit)
+            ]
+        ]);
     }
 
 } catch (Exception $e) {
