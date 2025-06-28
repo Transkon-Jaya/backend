@@ -35,7 +35,6 @@ $allowed_routes = [
     'table-user'     => 'services/hr/table-user.php',
     'total-masuk'    => 'services/hr/total-masuk.php',
     'holiday'        => 'services/hr/holiday.php',
-    //asset
     'assets'         => 'services/assets/assets.php',
     'asset-categories' => 'services/assets/categories.php',
     'asset-locations' => 'services/assets/locations.php',
