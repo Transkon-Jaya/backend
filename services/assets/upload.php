@@ -1,84 +1,92 @@
 <?php
 header("Content-Type: application/json");
-require 'db.php';
-require 'auth.php';
+require '../../db.php';
+require '../../auth.php';
+require '../../utils/compressResize.php'; // Gunakan utility yang sama
 
-// Authorize dengan level akses yang sesuai
+// Cek token dan hak akses
 authorize(5, ["admin_asset"], [], null);
 $user = verifyToken();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(["status" => 405, "error" => "Method not allowed"]);
-    exit;
+$uploadDir = "/var/www/html/uploads/assets/";
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
 }
-
-if (!isset($_FILES['image']) || !isset($_POST['asset_id'])) {
-    http_response_code(400);
-    echo json_encode(["status" => 400, "error" => "Bad request"]);
-    exit;
-}
-
-$assetId = (int)$_POST['asset_id'];
-$file = $_FILES['image'];
 
 try {
-    // Validasi asset_id
-    $stmt = $conn->prepare("SELECT id FROM assets WHERE id = ?");
-    $stmt->bind_param("i", $assetId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 0) {
-        throw new Exception("Asset not found");
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception("Method not allowed", 405);
     }
 
-    // Validasi file
+    // Validasi input
+    if (empty($_POST['asset_id'])) {
+        throw new Exception("ID asset diperlukan", 400);
+    }
+
+    if (empty($_FILES['image'])) {
+        throw new Exception("File gambar diperlukan", 400);
+    }
+
+    $assetId = (int)$_POST['asset_id'];
+    $file = $_FILES['image'];
+
+    // Validasi tipe file
     $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!in_array($file['type'], $allowedTypes)) {
-        throw new Exception("Invalid file type");
+        throw new Exception("Hanya file JPEG, PNG, atau GIF yang diperbolehkan", 400);
     }
 
-    if ($file['size'] > 5 * 1024 * 1024) { // 5MB max
-        throw new Exception("File too large");
-    }
-
-    // Buat direktori upload jika belum ada
-    $uploadDir = '../../uploads/assets/';
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    // Validasi ukuran file (max 2MB)
+    if ($file['size'] > 2 * 1024 * 1024) {
+        throw new Exception("Ukuran file maksimal 2MB", 400);
     }
 
     // Generate nama file unik
     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
     $filename = 'asset_' . $assetId . '_' . time() . '.' . $ext;
-    $targetPath = $uploadDir . $filename;
+    $uploadPath = $uploadDir . $filename;
 
-    // Upload file
-    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-        throw new Exception("Failed to upload file");
+    // Kompresi dan resize gambar
+    $resizeResult = compressAndResizeImage(
+        $file['tmp_name'], 
+        $uploadPath, 
+        800,  // Lebar maksimal
+        800,  // Tinggi maksimal
+        75    // Kualitas (0-100)
+    );
+
+    if (!$resizeResult) {
+        throw new Exception("Gagal memproses gambar", 500);
     }
 
     // Update database
-    $updateStmt = $conn->prepare("UPDATE assets SET image_path = ? WHERE id = ?");
-    $updateStmt->bind_param("si", $filename, $assetId);
+    $conn->autocommit(FALSE);
     
-    if (!$updateStmt->execute()) {
-        throw new Exception("Database update failed");
+    $imagePath = 'uploads/assets/' . $filename;
+    $stmt = $conn->prepare("UPDATE assets SET image_path = ? WHERE id = ?");
+    $stmt->bind_param("si", $imagePath, $assetId);
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Gagal update database: " . $stmt->error, 500);
     }
+
+    $conn->commit();
 
     // Response sukses
     echo json_encode([
         "status" => 200,
-        "message" => "File uploaded successfully",
-        "filename" => $filename,
-        "url" => "https://www.transkon-rent.com/uploads/assets/" . $filename
+        "message" => "Gambar berhasil diupload",
+        "image_path" => $imagePath,
+        "file_name" => $filename
     ]);
 
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(["status" => 500, "error" => $e->getMessage()]);
+    if (isset($conn)) $conn->rollback();
+    http_response_code($e->getCode() ?: 500);
+    echo json_encode([
+        "status" => $e->getCode() ?: 500,
+        "error" => $e->getMessage()
+    ]);
+} finally {
+    if (isset($conn)) $conn->close();
 }
-
-$conn->close();
-?>
