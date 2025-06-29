@@ -9,23 +9,27 @@ $user = verifyToken();
 $id_company = $user['id_company'] ?? null;
 
 $method = $_SERVER['REQUEST_METHOD'];
-$id = $_GET['id'] ?? ($_POST['id'] ?? null);
 
-// Ambil parameter dari query string
-$page = max(1, (int)($_GET['page'] ?? 1));
-$limit = min(100, max(1, (int)($_GET['limit'] ?? 12)));
-$search = $_GET['search'] ?? null;
+// Ambil ID dari URL path: /api/assets/{id}
+$requestUri = $_SERVER['REQUEST_URI'];
+$uriParts = explode('/', trim(parse_url($requestUri, PHP_URL_PATH), '/'));
+$idFromPath = isset($uriParts[2]) && is_numeric($uriParts[2]) ? (int)$uriParts[2] : null;
+
+$id = $_GET['id'] ?? ($_POST['id'] ?? $idFromPath);
+
+// Ambil parameter query untuk GET list
+$page     = max(1, (int)($_GET['page'] ?? 1));
+$limit    = min(100, max(1, (int)($_GET['limit'] ?? 12)));
+$search   = $_GET['search'] ?? null;
 $category = $_GET['category'] ?? null;
-$status = $_GET['status'] ?? null;
+$status   = $_GET['status'] ?? null;
 
 try {
     $conn->autocommit(false);
 
-    // ==== HANDLE PUT (Update asset) ====
+    // ================= PUT: update asset ====================
     if ($method === 'PUT') {
-        // Ambil body PUT (karena tidak otomatis seperti POST)
         $input = json_decode(file_get_contents("php://input"), true);
-
         if (!$id || !is_numeric($id)) {
             throw new Exception("ID asset tidak valid", 400);
         }
@@ -39,7 +43,7 @@ try {
             if (isset($input[$field])) {
                 $set[] = "$field = ?";
                 $params[] = $input[$field];
-                $types .= is_numeric($input[$field]) ? 'd' : 's'; // d = double/string tergantung tipe
+                $types .= is_numeric($input[$field]) ? 'd' : 's';
             }
         }
 
@@ -61,7 +65,7 @@ try {
         exit;
     }
 
-    // ==== HANDLE DELETE ====
+    // ================= DELETE: hapus asset ====================
     if ($method === 'DELETE') {
         if (!$id || !is_numeric($id)) {
             throw new Exception("ID asset tidak valid untuk dihapus", 400);
@@ -77,10 +81,9 @@ try {
         exit;
     }
 
-    // ==== HANDLE GET ====
+    // ================= GET: satu asset atau list ====================
     if ($method === 'GET') {
         if ($id) {
-            // Ambil single asset
             $stmt = $conn->prepare("SELECT * FROM assets WHERE id = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
@@ -96,9 +99,9 @@ try {
             exit;
         }
 
-        // List asset dengan filter & paginasi
+        // GET list dengan filter dan pagination
         $sql = "SELECT SQL_CALC_FOUND_ROWS
-                    a.*, 
+                    a.*,
                     c.name as category_name,
                     l.name as location_name,
                     d.name as department_name
@@ -112,14 +115,12 @@ try {
         $params = [];
         $types = '';
 
-        // Filter perusahaan (jika ada)
         if ($id_company) {
             $conditions[] = "a.id_company = ?";
             $params[] = $id_company;
             $types .= 'i';
         }
 
-        // Filter pencarian
         if ($search) {
             $conditions[] = "(a.name LIKE ? OR a.description LIKE ? OR a.serial_number LIKE ?)";
             $searchTerm = "%$search%";
@@ -176,12 +177,13 @@ try {
         exit;
     }
 
+    // ================= Default: Method tidak dikenali ====================
     throw new Exception("Method tidak didukung", 405);
 
 } catch (Exception $e) {
     $conn->rollback();
     http_response_code($e->getCode() ?: 500);
-    error_log("Asset API Error: " . $e->getMessage()); // Tulis ke log PHP
+    error_log("Asset API Error: " . $e->getMessage());
     echo json_encode([
         "status" => $e->getCode() ?: 500,
         "error" => $e->getMessage()
