@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
-require '../../db.php';  // Adjust path as needed
-require '../../auth.php'; // Adjust path as needed
+require 'db.php';  // Adjust path as needed
+require 'auth.php'; // Adjust path as needed
 
 $method = $_SERVER['REQUEST_METHOD'];
 $id_company = $_SESSION['user']['id_company'] ?? null;
