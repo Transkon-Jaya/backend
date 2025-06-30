@@ -3,9 +3,6 @@ header("Content-Type: application/json");
 require 'db.php';
 require 'auth.php';
 
-authorize(5, ["admin_asset"], [], null);
-$user = verifyToken();
-$id_company = $user['id_company'] ?? null;
 
 $method = $_SERVER['REQUEST_METHOD'];
 $id = $_GET['id'] ?? ($_POST['id'] ?? null);
@@ -256,4 +253,27 @@ try {
     ]);
 } finally {
     $conn->close();
+}
+
+// =============================
+// === GET /assets/locations ===
+// =============================
+if ($method === 'GET' && isset($_GET['get_locations'])) {
+    $sql = "SELECT id, name FROM asset_locations WHERE id_company = ? ORDER BY name";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id_company);
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $locations = [];
+    while ($row = $result->fetch_assoc()) {
+        $locations[] = $row;
+    }
+    
+    $conn->commit();
+    echo json_encode([
+        "status" => 200,
+        "data" => $locations
+    ]);
+    exit;
 }
