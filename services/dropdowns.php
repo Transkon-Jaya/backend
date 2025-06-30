@@ -85,6 +85,9 @@ $allowed_routes = [
     $prefix.'vehicle_type' => [
         'query' => "SELECT DISTINCT vehicle_type FROM down_equipment",
     ],
+    $prefix.'asset_locations' => [
+        'query' => "SELECT DISTINCT name FROM asset_locations",
+    ],
 ];
 
 $default_config = [
