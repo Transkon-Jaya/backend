@@ -32,8 +32,8 @@ try {
         }
 
         $sql = "INSERT INTO assets 
-            (name, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, id_company)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            (name,code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, id_company)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
@@ -46,6 +46,7 @@ try {
 
         $stmt->bind_param(
             "sisdsissi",
+            $input['code'],
             $input['name'],
             $input['category_id'],
             $input['status'],
@@ -76,7 +77,7 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
         $set = [];
         $params = [];
         $types = '';
