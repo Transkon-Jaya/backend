@@ -85,6 +85,14 @@ $allowed_routes = [
     $prefix.'vehicle_type' => [
         'query' => "SELECT DISTINCT vehicle_type FROM down_equipment",
     ],
+    $prefix.'asset_location_names' => [
+    'query' => "SELECT name FROM asset_locations WHERE id_company = ? ORDER BY name",
+    'params' => 0,
+    'auth' => true,
+    'before_query' => function($conn, $user) {
+        return [$user['id_company']];
+        }
+    ],
 ];
 
 $default_config = [
