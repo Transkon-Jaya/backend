@@ -3,8 +3,8 @@ header("Content-Type: application/json");
 require 'db.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-
 $uploadDir = "/var/www/html/uploads/memo/";
+
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
@@ -18,10 +18,9 @@ switch ($method) {
             echo json_encode(["status" => 500, "error" => "Prepare failed: " . $conn->error]);
             exit;
         }
-        $stmt->bind_param("s", $username);
+
         $stmt->execute();
         $result = $stmt->get_result();
-
         if (!$result) {
             http_response_code(500);
             echo json_encode(["status" => 500, "error" => $conn->error]);
@@ -32,22 +31,23 @@ switch ($method) {
         while ($row = $result->fetch_assoc()) {
             $profile[] = $row;
         }
+
+        $result->free(); // ✅ cleanup
+        $stmt->close();
+
         echo json_encode($profile);
         break;
 
     case 'POST':
-        // Validate username
         if (!isset($_POST['username'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Username is required."]);
             exit;
         }
-        $username = $_POST['username'];
 
-        // Optional: Get no_document and description from POST
+        $username = $_POST['username'];
         $no_document = $_POST['no_document'] ?? "";
         $description = $_POST['description'] ?? "";
-
         $fileName = null;
 
         if (isset($_FILES['memo']) && $_FILES['memo']['error'] === UPLOAD_ERR_OK) {
@@ -60,7 +60,6 @@ switch ($method) {
                 exit;
             }
 
-            // Clean username for filename safety
             $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
             $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
             $fileName = $cleanUsername . "_" . time() . "." . $ext;
@@ -73,7 +72,6 @@ switch ($method) {
             }
         }
 
-        // Insert into DB
         $sql = "INSERT INTO memo (username, no_document, photo, description) VALUES (?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
@@ -81,26 +79,22 @@ switch ($method) {
             echo json_encode(["status" => 500, "error" => "Prepare failed: " . $conn->error]);
             exit;
         }
-        // Bind params (all strings) - photo can be null if no file uploaded
-        $stmt->bind_param(
-            "ssss",
-            $username,
-            $no_document,
-            $fileName,
-            $description
-        );
+
+        $stmt->bind_param("ssss", $username, $no_document, $fileName, $description);
 
         if (!$stmt->execute()) {
             http_response_code(500);
             echo json_encode(["status" => 500, "error" => "Database error: " . $stmt->error]);
+            $stmt->close();
             exit;
         }
+
         $stmt->close();
 
         echo json_encode([
             "status" => 200,
             "message" => "Memo inserted successfully",
-            "foto" => $fileName ?? null
+            "foto" => $fileName
         ]);
         break;
 
@@ -111,4 +105,3 @@ switch ($method) {
 }
 
 $conn->close();
-?>
