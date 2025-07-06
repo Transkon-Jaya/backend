@@ -45,7 +45,7 @@ try {
     if ($result && $result->num_rows > 0) {
         $user = $result->fetch_assoc();
     }
-    // $stmt->close();
+    $stmt->close();
 
     // If user found, get permissions
     if ($user) {
@@ -60,7 +60,7 @@ try {
         while ($row = $result_permissions->fetch_assoc()) {
             $permissions[] = $row['permission'];
         }
-        // $stmt_permissions->close();
+        $stmt_permissions->close();
 
         // Verify password
         if (password_verify($password, $user['passwd'])) {
