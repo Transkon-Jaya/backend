@@ -29,61 +29,85 @@ if (empty($username) || empty($password)) {
     exit;
 }
 
-// Query database with stored procedure
-$sql = "CALL user_login(?)"; 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
+$user = null;
+$permissions = [];
 
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-} else {
-    $user = null;
-}
-
-$stmt->close();
-
-if ($user) {
-    $user_level = $user["user_level"];
-    $photo = $user["photo"];
-    $name = $user["name"];
-    $id_company = $user["id_company"];
-    $sql = "CALL user_get_permissions(?)";
-    $stmt = $conn->prepare($sql);
+try {
+    // Login lookup
+    $stmt = $conn->prepare("CALL user_login(?)");
+    if (!$stmt) {
+        throw new Exception("Failed to prepare user_login");
+    }
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
-    $permissions = [];
-    while ($row = $result->fetch_assoc()) {
-        $permissions[] = $row['permission'];
+
+    if ($result && $result->num_rows > 0) {
+        $user = $result->fetch_assoc();
     }
     $stmt->close();
 
-    if (password_verify($password, $user['passwd'])) {
-        $issued_at = time();
-        $expiration_time = $issued_at + (60 * 60 * 14); // Token expires in 14 hours
-        $payload = [
-            "username" => $username,
-            "name" => $name,
-            "photo" => $photo,
-            "user_level" => $user_level,
-            "permissions" => $permissions,
-            "id_company" => $id_company,
-            "exp" => $expiration_time
-        ];
-        http_response_code(200);
-        $jwt = JWT::encode($payload, $secret_key, 'HS256');
-        echo json_encode(["status" => 200, "token" => $jwt, "name" => $name, "photo" => $photo, "user_level" => $user_level, "permissions" => $permissions]);
+    // If user found, get permissions
+    if ($user) {
+        $stmt_permissions = $conn->prepare("CALL user_get_permissions(?)");
+        if (!$stmt_permissions) {
+            throw new Exception("Failed to prepare user_get_permissions");
+        }
+        $stmt_permissions->bind_param("s", $username);
+        $stmt_permissions->execute();
+        $result_permissions = $stmt_permissions->get_result();
+
+        while ($row = $result_permissions->fetch_assoc()) {
+            $permissions[] = $row['permission'];
+        }
+        $stmt_permissions->close();
+
+        // Verify password
+        if (password_verify($password, $user['passwd'])) {
+            $issued_at = time();
+            $expiration_time = $issued_at + (60 * 60 * 24 * 6); // 6 days
+            $payload = [
+                "username"     => $username,
+                "name"         => $user["name"],
+                "photo"        => $user["photo"],
+                "user_level"   => $user["user_level"],
+                "permissions"  => $permissions,
+                "id_company"   => $user["id_company"],
+                "exp"          => $expiration_time
+            ];
+
+            $jwt = JWT::encode($payload, $secret_key, 'HS256');
+
+            http_response_code(200);
+            echo json_encode([
+                "status"      => 200,
+                "token"       => $jwt,
+                "name"        => $user["name"],
+                "photo"       => $user["photo"],
+                "user_level"  => $user["user_level"],
+                "permissions" => $permissions
+            ]);
+        } else {
+            http_response_code(401);
+            echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
+        }
     } else {
         http_response_code(401);
         echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
     }
-} else {
-    http_response_code(401);
-    echo json_encode(["status" => 401, "error" => "Invalid username or password"]);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(["status" => 500, "error" => "Server error", "details" => $e->getMessage()]);
+} finally {
+    // Cleanup
+    if (isset($stmt) && $stmt instanceof mysqli_stmt) {
+        @$stmt->close();
+    }
+    if (isset($stmt_permissions) && $stmt_permissions instanceof mysqli_stmt) {
+        @$stmt_permissions->close();
+    }
+    $conn->close();
 }
 
-$stmt->close();
-$conn->close();
 ?>
