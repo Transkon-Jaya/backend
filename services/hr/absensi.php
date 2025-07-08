@@ -84,7 +84,7 @@ if ($status === "IN") {
     $stmt = $conn->prepare("
         UPDATE hr_absensi SET
             foto_out = ?, lokasi_out = ?, longitude_out = ?, latitude_out = ?, ip_out = ?, jarak_out = ?, dim_out = ?, device_out = ?, hour_out = CURRENT_TIMESTAMP()
-        WHERE id = ?
+        WHERE id = ? AND hour_out IS NULL
     ");
     $stmt->bind_param("sssssssss", $uniqueName, $lokasi, $long, $lang, $ip, $jarak, $dim, $device, $id);
 }

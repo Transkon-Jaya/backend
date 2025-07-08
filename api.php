@@ -12,6 +12,7 @@ $allowed_routes = [
     'shortener'      => 'services/tools/shortener.php',
     'tools/memo'     => 'services/tools/memo.php',
     'test'           => 'test.php',
+    'test2'          => 'test2.php',
     'login'          => 'login.php',
     'absensi'        => 'services/hr/absensi.php',
     // 'timeoff'        => 'services/hr/timeoff.php',
