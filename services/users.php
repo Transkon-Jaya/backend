@@ -95,6 +95,7 @@ switch ($method) {
     // Default value untuk mencegah error null
     $data['hub_placement'] = $data['hub_placement'] ?? '';
     $data['gaji_pokok'] = $data['gaji_pokok'] ?? 0;
+    $data['id_company'] = $data['id_company'] ?? 0;
 
     $stmt = $conn->prepare("UPDATE user_profiles SET 
         name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
