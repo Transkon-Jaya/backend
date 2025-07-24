@@ -98,12 +98,13 @@ switch ($method) {
             email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
             WHERE username=?");
 
-        $stmt->bind_param("sssssssssssssssssss",
+        $stmt->bind_param("sssssssssssssssdssss",
             $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
             $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
             $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
-            $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $username, $data['site']
+            $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $username
         );
+
 
         if ($stmt->execute()) {
             echo json_encode(["status" => 200, "message" => "Updated successfully"]);
