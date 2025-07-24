@@ -49,6 +49,9 @@ switch ($method) {
     case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
 
+        // Set default id_company jika tidak disediakan
+        $data['id_company'] = $data['id_company'] ?? 1;
+
         if (empty($data['username']) || empty($data['name'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Username and name are required"]);
