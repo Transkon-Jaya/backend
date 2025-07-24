@@ -92,13 +92,17 @@ switch ($method) {
     $data = json_decode(file_get_contents('php://input'), true);
     $username = $data['username'];
 
+    // Default value untuk mencegah error null
+    $data['hub_placement'] = $data['hub_placement'] ?? '';
+    $data['gaji_pokok'] = $data['gaji_pokok'] ?? 0;
+
     $stmt = $conn->prepare("UPDATE user_profiles SET 
         name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
         jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
         email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
         WHERE username=?");
 
-    $stmt->bind_param("ssssssssssssssdssssss",
+    $stmt->bind_param("ssssssssssssssdsssss",
         $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
         $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
         $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
