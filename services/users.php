@@ -48,9 +48,7 @@ switch ($method) {
 
     case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
-
-        // Set default id_company jika tidak disediakan
-        $data['id_company'] = $data['id_company'] ?? 1;
+        
 
         if (empty($data['username']) || empty($data['name'])) {
             http_response_code(400);
@@ -75,7 +73,7 @@ switch ($method) {
             email, phone, gaji_pokok, divisi, section, salary_code, site, id_company
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-        $stmt->bind_param("ssssssssssssssssssssi",
+        $stmt->bind_param("sssssssssssssssssssss",
             $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
             $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
             $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
