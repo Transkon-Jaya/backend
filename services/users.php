@@ -12,7 +12,7 @@ switch ($method) {
         $id_company = $user['id_company'] ?? null;
         $username = $_GET['username'] ?? '';
 
-        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site, divisi, section, salary_code";
+        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, divisi, section, salary_code, site";
 
         if (!empty($username)) {
             if ($id_company === 0) {
@@ -69,14 +69,14 @@ switch ($method) {
         $stmt = $conn->prepare("INSERT INTO user_profiles (
             username, name, dob, placement, gender, lokasi, hub_placement, status,
             jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
-            email, phone, gaji_pokok, site, divisi, section, salary_code
+            email, phone, gaji_pokok, divisi, section, salary_code, site
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmt->bind_param("ssssssssssssssssssss",
             $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
             $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
             $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
-            $data['email'], $data['phone'], $data['gaji_pokok'], $data['site'], $data['divisi'], $data['section'], $data['salary_code']
+            $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site']
         );
 
         if ($stmt->execute()) {
@@ -95,14 +95,14 @@ switch ($method) {
         $stmt = $conn->prepare("UPDATE user_profiles SET 
             name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
             jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
-            email=?, phone=?, gaji_pokok=?, site=?, divisi=?, section=?, salary_code=? 
+            email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
             WHERE username=?");
 
         $stmt->bind_param("sssssssssssssssss",
             $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
             $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
             $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
-            $data['gaji_pokok'], $data['site'], $data['divisi'], $data['section'], $data['salary_code'], $username
+            $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $username, $data['site']
         );
 
         if ($stmt->execute()) {
