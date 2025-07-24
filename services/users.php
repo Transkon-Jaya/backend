@@ -6,47 +6,30 @@ require 'auth.php';
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
-    case 'GET': // Fetch user profiles
+    case 'GET':
         authorize(8, ["admin_absensi"], [], null);
         $user = verifyToken();
         $id_company = $user['id_company'] ?? null;
-        $username = isset($_GET['username']) ? $_GET['username'] : '';
+        $username = $_GET['username'] ?? '';
+
+        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site";
 
         if (!empty($username)) {
             if ($id_company === 0) {
-                // Superadmin: search username without company filter
-                $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site
-                                        FROM user_profiles 
-                                        WHERE username LIKE CONCAT(?, '%')
-                                        ORDER BY username ASC");
+                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles WHERE username LIKE CONCAT(?, '%') ORDER BY username ASC");
                 $stmt->bind_param("s", $username);
             } else {
-                // Regular user: search username + filter by company
-                $stmt = $conn->prepare("SELECT username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, site
-                                        FROM user_profiles 
-                                        WHERE username LIKE CONCAT(?, '%') 
-                                            AND (id_company = ? OR id_company IS NULL)
-                                            AND placement != 'Admin'
-                                        ORDER BY username ASC");
+                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles WHERE username LIKE CONCAT(?, '%') AND (id_company = ? OR id_company IS NULL) AND placement != 'Admin' ORDER BY username ASC");
                 $stmt->bind_param("si", $username, $id_company);
             }
         } else {
             if ($id_company === 0) {
-                // Superadmin: get all users
-                $stmt = $conn->prepare("SELECT username, name, department, jabatan, placement, gender, lokasi, site 
-                                        FROM user_profiles
-                                        ORDER BY username ASC");
+                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles ORDER BY username ASC");
             } else {
-                // Regular user: filter by company + global
-                $stmt = $conn->prepare("SELECT username, name, department, jabatan, placement, gender, lokasi, site 
-                                        FROM user_profiles
-                                        WHERE id_company = ?
-                                            AND placement != 'Admin'
-                                        ORDER BY username ASC");
+                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles WHERE id_company = ? AND placement != 'Admin' ORDER BY username ASC");
                 $stmt->bind_param("i", $id_company);
             }
         }
-
 
         if (!$stmt->execute()) {
             http_response_code(500);
@@ -63,42 +46,37 @@ switch ($method) {
         echo json_encode($users);
         break;
 
-    case 'POST': // Insert new user
+    case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
-        
-        // Validasi data
+
         if (empty($data['username']) || empty($data['name'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Username and name are required"]);
             break;
         }
+
         $password = password_hash("password", PASSWORD_BCRYPT);
         $user_level = 9;
 
-        $stmt = $conn->prepare("INSERT INTO users
-                               (username, passwd, user_level) 
-                               VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", 
-            $data['username'],
-            $password,
-            $user_level
-        );
+        $stmt = $conn->prepare("INSERT INTO users (username, passwd, user_level) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $data['username'], $password, $user_level);
         if (!$stmt->execute()) {
             http_response_code(500);
             echo json_encode(["status" => 500, "error" => $stmt->error]);
+            break;
         }
-        $stmt = $conn->prepare("INSERT INTO user_profiles 
-                               (username, name, department,jabatan, placement, gender, lokasi, site)              
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssssss", 
-            $data['username'],
-            $data['name'],
-            $data['department'],
-            $data['jabatan'],
-            $data['placement'],
-            $data['gender'],
-            $data['lokasi'],
-            $data['site']
+
+        $stmt = $conn->prepare("INSERT INTO user_profiles (
+            username, name, dob, placement, gender, lokasi, hub_placement, status,
+            jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
+            email, phone, gaji_pokok, site
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        $stmt->bind_param("sssssssssssssssss",
+            $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
+            $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
+            $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
+            $data['email'], $data['phone'], $data['gaji_pokok'], $data['site']
         );
 
         if ($stmt->execute()) {
@@ -113,18 +91,18 @@ switch ($method) {
     case 'PUT':
         $data = json_decode(file_get_contents('php://input'), true);
         $username = $data['username'];
-        
+
         $stmt = $conn->prepare("UPDATE user_profiles SET 
-                               name=?, department=?,jabatan=?, placement=?, gender=?, lokasi=? 
-                               WHERE username=?");
-        $stmt->bind_param("sssssss", 
-            $data['name'],
-            $data['department'],
-            $data['jabatan'],
-            $data['placement'],
-            $data['gender'],
-            $data['lokasi'],
-            $username
+            name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
+            jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
+            email=?, phone=?, gaji_pokok=?, site=? 
+            WHERE username=?");
+
+        $stmt->bind_param("sssssssssssssssss",
+            $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
+            $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
+            $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
+            $data['gaji_pokok'], $data['site'], $username
         );
 
         if ($stmt->execute()) {
@@ -137,7 +115,6 @@ switch ($method) {
 
     case 'DELETE':
         $username = $_GET['username'] ?? '';
-        
         if (empty($username)) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Username is required"]);
