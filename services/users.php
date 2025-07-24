@@ -75,7 +75,7 @@ switch ($method) {
             email, phone, gaji_pokok, divisi, section, salary_code, site, id_company
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-        $stmt->bind_param("sssssssssssssssssssss",
+        $stmt->bind_param("ssssssssssssssssssssi",
             $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
             $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
             $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
