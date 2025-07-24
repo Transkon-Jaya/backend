@@ -89,32 +89,30 @@ switch ($method) {
         break;
 
     case 'PUT':
-        $data = json_decode(file_get_contents('php://input'), true);
-        $username = $data['username'];
+    $data = json_decode(file_get_contents('php://input'), true);
+    $username = $data['username'];
 
-        $stmt = $conn->prepare("UPDATE user_profiles SET 
-            name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
-            jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
-            email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
-            WHERE username=?");
+    $stmt = $conn->prepare("UPDATE user_profiles SET 
+        name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
+        jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
+        email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
+        WHERE username=?");
 
-        $stmt->bind_param("sssssssssssssssdssss",
-            $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
-            $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
-            $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
-            $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $username
-        );
+    $stmt->bind_param("sssssssssssssssdssss",
+        $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
+        $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
+        $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
+        $data['gaji_pokok'], // This is the double (d) field
+        $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $username
+    );
 
-
-
-
-        if ($stmt->execute()) {
-            echo json_encode(["status" => 200, "message" => "Updated successfully"]);
-        } else {
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $stmt->error]);
-        }
-        break;
+    if ($stmt->execute()) {
+        echo json_encode(["status" => 200, "message" => "Updated successfully"]);
+    } else {
+        http_response_code(500);
+        echo json_encode(["status" => 500, "error" => $stmt->error]);
+    }
+    break;
 
     case 'DELETE':
         $username = $_GET['username'] ?? '';
