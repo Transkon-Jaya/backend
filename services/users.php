@@ -107,6 +107,7 @@ switch ($method) {
 
 
 
+
         if ($stmt->execute()) {
             echo json_encode(["status" => 200, "message" => "Updated successfully"]);
         } else {
