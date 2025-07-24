@@ -98,7 +98,7 @@ switch ($method) {
         email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
         WHERE username=?");
 
-    $stmt->bind_param("ssssssssssssssdsssss",
+    $stmt->bind_param("ssssssssssssssdssssss",
         $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
         $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
         $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
