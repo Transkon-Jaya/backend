@@ -6,45 +6,100 @@ require 'auth.php';
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
-    case 'GET':
+        case 'GET':
         authorize(8, ["admin_absensi"], [], null);
         $user = verifyToken();
+        $requester_user_level = $user['user_level'] ?? null; // Dapatkan level pengguna yang sedang login
         $id_company = $user['id_company'] ?? null;
-        $username = $_GET['username'] ?? '';
+        $username_filter = $_GET['username'] ?? '';
 
-        // --- Tambahkan id_company ke selectFields ---
-        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, divisi, section, salary_code, site, id_company";
+        // Validasi tambahan: Pastikan user_level pengguna login diketahui
+        if ($requester_user_level === null) {
+             http_response_code(403);
+             echo json_encode(["status" => 403, "error" => "Access denied. User level information missing."]);
+             break;
+        }
 
-        if (!empty($username)) {
+        $selectFields = "up.username, up.name, up.department, up.placement, up.hub_placement, up.gender, up.lokasi, up.dob, up.status, up.jabatan, up.kepegawaian, up.klasifikasi, up.klasifikasi_jabatan, up.email, up.phone, up.gaji_pokok, up.divisi, up.section, up.salary_code, up.site, up.id_company, up.photo";
+
+        // Tentukan kondisi filter user_level berdasarkan level pengguna yang login
+        $userLevelCondition = "";
+        if ($requester_user_level != 0) {
+            // Jika bukan level 0, jangan tampilkan user level 8
+            $userLevelCondition = "AND u.user_level != 8";
+        }
+        // Jika level 0, $userLevelCondition tetap kosong, sehingga tidak ada filter tambahan
+
+        if (!empty($username_filter)) {
             if ($id_company === 0) {
-                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles WHERE username LIKE CONCAT(?, '%') ORDER BY username ASC");
-                $stmt->bind_param("s", $username);
+                // Super Admin
+                $stmt = $conn->prepare("SELECT $selectFields
+                                        FROM user_profiles up
+                                        JOIN users u ON up.username = u.username
+                                        WHERE up.username LIKE CONCAT(?, '%')
+                                        $userLevelCondition
+                                        ORDER BY up.username ASC");
+                $stmt->bind_param("s", $username_filter);
             } else {
-                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles WHERE username LIKE CONCAT(?, '%') AND (id_company = ? OR id_company IS NULL) AND placement != 'Admin' ORDER BY username ASC");
-                $stmt->bind_param("si", $username, $id_company);
+                // Admin Perusahaan
+                $stmt = $conn->prepare("SELECT $selectFields
+                                        FROM user_profiles up
+                                        JOIN users u ON up.username = u.username
+                                        WHERE up.username LIKE CONCAT(?, '%')
+                                        AND (up.id_company = ? OR up.id_company IS NULL)
+                                        AND up.placement != 'Admin'
+                                        $userLevelCondition
+                                        ORDER BY up.username ASC");
+                $stmt->bind_param("si", $username_filter, $id_company);
             }
         } else {
             if ($id_company === 0) {
-                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles ORDER BY username ASC");
+                // Super Admin
+                $stmt = $conn->prepare("SELECT $selectFields
+                                        FROM user_profiles up
+                                        JOIN users u ON up.username = u.username
+                                        WHERE 1=1
+                                        $userLevelCondition
+                                        ORDER BY up.username ASC");
             } else {
-                $stmt = $conn->prepare("SELECT $selectFields FROM user_profiles WHERE id_company = ? AND placement != 'Admin' ORDER BY username ASC");
+                // Admin Perusahaan
+                $stmt = $conn->prepare("SELECT $selectFields
+                                        FROM user_profiles up
+                                        JOIN users u ON up.username = u.username
+                                        WHERE up.id_company = ?
+                                        AND up.placement != 'Admin'
+                                        $userLevelCondition
+                                        ORDER BY up.username ASC");
                 $stmt->bind_param("i", $id_company);
             }
         }
 
+        if (!$stmt) {
+             http_response_code(500);
+             error_log("DB Prepare Error (GET user_profiles): " . $conn->error);
+             echo json_encode(["status" => 500, "error" => "Failed to prepare fetch query."]);
+             break;
+        }
+
         if (!$stmt->execute()) {
             http_response_code(500);
-            // Log error untuk debugging
-            error_log("DB Error (GET user_profiles): " . $stmt->error);
+            error_log("DB Execute Error (GET user_profiles): " . $stmt->error);
             echo json_encode(["status" => 500, "error" => "Failed to fetch users."]);
+            $stmt->close();
             break;
         }
 
         $result = $stmt->get_result();
         $users = [];
         while ($row = $result->fetch_assoc()) {
-            $users[] = $row;
+            $cleanedRow = [];
+            foreach($row as $key => $value) {
+                $cleanKey = preg_replace('/^up\./', '', $key);
+                $cleanedRow[$cleanKey] = $value;
+            }
+            $users[] = $cleanedRow;
         }
+        $stmt->close();
 
         echo json_encode($users);
         break;
