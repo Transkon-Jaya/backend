@@ -12,7 +12,7 @@ switch ($method) {
         $id_company = $user['id_company'] ?? null;
         $username = $_GET['username'] ?? '';
 
-        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, divisi, section, salary_code, site";
+        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, divisi, section, salary_code, id_company, site";
 
         if (!empty($username)) {
             if ($id_company === 0) {
@@ -70,14 +70,14 @@ switch ($method) {
         $stmt = $conn->prepare("INSERT INTO user_profiles (
             username, name, dob, placement, gender, lokasi, hub_placement, status,
             jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
-            email, phone, gaji_pokok, divisi, section, salary_code, site
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            email, phone, gaji_pokok, divisi, section, salary_code, id_company, site
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-        $stmt->bind_param("sssssssssssssssdssss",
+        $stmt->bind_param("sssssssssssssssdsssss",
             $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
             $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
             $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
-            $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site']
+            $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'],$data['id_company'], $data['site']
         );
 
         if ($stmt->execute()) {
@@ -100,15 +100,15 @@ switch ($method) {
     $stmt = $conn->prepare("UPDATE user_profiles SET 
         name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
         jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
-        email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?
+        email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, id_company=? site=?
         WHERE username=?");
 
-    $stmt->bind_param("ssssssssssssssdsssss",
+    $stmt->bind_param("ssssssssssssssdssssss",
         $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
         $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
         $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
         $data['gaji_pokok'], // This is the double (d) field
-        $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $username
+        $data['divisi'], $data['section'], $data['salary_code'], $data['id_company'], $data['site'], $username
     );
 
     if ($stmt->execute()) {
