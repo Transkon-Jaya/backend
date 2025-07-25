@@ -12,7 +12,8 @@ switch ($method) {
         $id_company = $user['id_company'] ?? null;
         $username = $_GET['username'] ?? '';
 
-        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, divisi, section, salary_code, id_company, site";
+        // --- Tambahkan id_company ke selectFields ---
+        $selectFields = "username, name, department, placement, hub_placement, gender, lokasi, dob, status, jabatan, kepegawaian, klasifikasi, klasifikasi_jabatan, email, phone, gaji_pokok, divisi, section, salary_code, site, id_company";
 
         if (!empty($username)) {
             if ($id_company === 0) {
@@ -33,7 +34,9 @@ switch ($method) {
 
         if (!$stmt->execute()) {
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $stmt->error]);
+            // Log error untuk debugging
+            error_log("DB Error (GET user_profiles): " . $stmt->error);
+            echo json_encode(["status" => 500, "error" => "Failed to fetch users."]);
             break;
         }
 
@@ -47,77 +50,187 @@ switch ($method) {
         break;
 
     case 'POST':
-        $data = json_decode(file_get_contents('php://input'), true);
-        
+        // --- Tambahkan Authorization di sini ---
+        authorize(8, ["admin_absensi"], [], null); // Hanya level 8 atau admin_absensi
+        $user = verifyToken(); // Dapatkan info user dari token
+        $requester_id_company = $user['id_company'] ?? null; // Ambil id_company dari requester
 
+        if ($requester_id_company === null) {
+             http_response_code(403);
+             echo json_encode(["status" => 403, "error" => "Access denied. User company information missing."]);
+             break;
+        }
+        // --- Akhir Penambahan Authorization ---
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        // Validasi awal
         if (empty($data['username']) || empty($data['name'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Username and name are required"]);
             break;
         }
 
-        $password = password_hash("password", PASSWORD_BCRYPT);
-        $user_level = 9;
+        // --- Logika Penentuan id_company untuk User Baru ---
+        // Asumsi: Admin hanya bisa membuat user untuk company mereka sendiri.
+        // Jika ingin Super Admin (id_company=0) bisa membuat untuk siapa saja,
+        // logikanya bisa disesuaikan (lihat jawaban sebelumnya untuk contoh).
+        // Untuk saat ini, kita paksa id_company user baru sama dengan requester.
+        $user_id_company = $requester_id_company; // <-- Ini adalah perubahan utama
 
-        $stmt = $conn->prepare("INSERT INTO users (username, passwd, user_level) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $data['username'], $password, $user_level);
-        if (!$stmt->execute()) {
+        // Jika Anda ingin memungkinkan Super Admin menentukan id_company:
+        // if ($requester_id_company == 0) {
+        //     $user_id_company = $data['id_company'] ?? 0; // Atau validasi lebih lanjut
+        // } else {
+        //     $user_id_company = $requester_id_company;
+        // }
+        // --- Akhir Logika id_company ---
+
+        // Hash password default
+        $password = password_hash("password", PASSWORD_BCRYPT); // Pertimbangkan untuk mengubah ini
+        $user_level = 9; // Pertimbangkan untuk membuat ini dinamis atau default yang lebih aman
+
+        // --- Cek Duplikasi Username ---
+        $checkStmt = $conn->prepare("SELECT username FROM users WHERE username = ?");
+        $checkStmt->bind_param("s", $data['username']);
+        $checkStmt->execute();
+        if ($checkStmt->get_result()->num_rows > 0) {
+             http_response_code(400);
+             echo json_encode(["status" => 400, "error" => "Username already exists"]);
+             $checkStmt->close();
+             break;
+        }
+        $checkStmt->close();
+        // --- Akhir Cek Duplikasi ---
+
+        // Mulai transaksi untuk memastikan konsistensi data
+        $conn->begin_transaction();
+
+        try {
+            // Insert ke tabel `users`
+            $stmt1 = $conn->prepare("INSERT INTO users (username, passwd, user_level) VALUES (?, ?, ?)");
+            if (!$stmt1) {
+                 throw new Exception("Prepare failed for users table: " . $conn->error);
+            }
+            $stmt1->bind_param("sss", $data['username'], $password, $user_level);
+            if (!$stmt1->execute()) {
+                 throw new Exception("Execute failed for users table: " . $stmt1->error);
+            }
+            $stmt1->close();
+
+            // Insert ke tabel `user_profiles` (tambahkan id_company)
+            // --- Perbaikan bind_param: Gunakan 'd' untuk gaji_pokok dan 'i' untuk id_company ---
+            $stmt2 = $conn->prepare("INSERT INTO user_profiles (
+                username, name, dob, placement, gender, lokasi, hub_placement, status,
+                jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
+                email, phone, gaji_pokok, divisi, section, salary_code, site, id_company
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+            if (!$stmt2) {
+                 throw new Exception("Prepare failed for user_profiles table: " . $conn->error);
+            }
+
+            // Perbarui bind_param: 'd' untuk gaji_pokok (posisi 16), 'i' untuk id_company (posisi 21)
+            // Urutan tipe: s(15) d(1) s(4) i(1)
+            $stmt2->bind_param("sssssssssssssssdssssi",
+                $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
+                $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
+                $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
+                $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $user_id_company // Gunakan $user_id_company
+            );
+
+            if (!$stmt2->execute()) {
+                 throw new Exception("Execute failed for user_profiles table: " . $stmt2->error);
+            }
+            $stmt2->close();
+
+            // Jika semua berhasil, commit transaksi
+            $conn->commit();
+
+            http_response_code(201);
+            echo json_encode([
+                "status" => 201,
+                "message" => "User created successfully",
+                "created_user_company_id" => $user_id_company // Opsional: informasikan id_company yang digunakan
+            ]);
+
+        } catch (Exception $e) {
+            // Jika ada error, rollback transaksi
+            $conn->rollback();
+
+            // Log error untuk debugging (jangan tampilkan ke user di production)
+            error_log("DB Transaction Error (user creation): " . $e->getMessage());
+
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $stmt->error]);
-            break;
+            // Kembalikan pesan umum ke frontend
+            echo json_encode(["status" => 500, "error" => "Failed to create user. Please check server logs."]);
+            // echo json_encode(["status" => 500, "error" => $e->getMessage()]); // Hanya untuk debugging
         }
 
-        $stmt = $conn->prepare("INSERT INTO user_profiles (
-            username, name, dob, placement, gender, lokasi, hub_placement, status,
-            jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
-            email, phone, gaji_pokok, divisi, section, salary_code, id_company, site
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        break; // Akhir case 'POST'
 
-        $stmt->bind_param("sssssssssssssssdsssss",
-            $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
-            $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
-            $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
-            $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'],$data['id_company'], $data['site']
+    case 'PUT':
+        // --- Tambahkan Authorization jika diperlukan ---
+        // authorize(8, ["admin_absensi"], [], null);
+        // $user = verifyToken();
+        // $requester_id_company = $user['id_company'] ?? null;
+        // ... (logika validasi id_company jika perlu membatasi update lintas company)
+        // --- Akhir Authorization ---
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $username = $data['username'] ?? '';
+
+        if (empty($username)) {
+             http_response_code(400);
+             echo json_encode(["status" => 400, "error" => "Username is required for update"]);
+             break;
+        }
+
+        // Default value untuk mencegah error null
+        $data['hub_placement'] = $data['hub_placement'] ?? '';
+        $data['gaji_pokok'] = $data['gaji_pokok'] ?? 0.0; // Pastikan default adalah float/double
+        $data['id_company'] = $data['id_company'] ?? 0; // Default id_company jika tidak ada
+
+        // --- Perbaikan Query dan bind_param ---
+        // Tambahkan id_company=? ke SET clause
+        // Pastikan jumlah placeholder (?) dan karakter di bind_param sesuai
+        $stmt = $conn->prepare("UPDATE user_profiles SET 
+            name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
+            jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
+            email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, site=?, id_company=?
+            WHERE username=?");
+
+        if (!$stmt) {
+             http_response_code(500);
+             error_log("DB Prepare Error (PUT user_profiles): " . $conn->error);
+             echo json_encode(["status" => 500, "error" => "Failed to prepare update query."]);
+             break;
+        }
+
+        // Perbaiki bind_param: 'd' untuk gaji_pokok (posisi 15), 'i' untuk id_company (posisi 20)
+        // Total 21 parameter: 14x's' + 1x'd' + 5x's' + 1x'i' + 1x's' (username)
+        $stmt->bind_param("ssssssssssssssdssssis",
+            $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
+            $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
+            $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
+            $data['gaji_pokok'], // Ini adalah double (d)
+            $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $data['id_company'], $username // id_company adalah integer (i)
         );
 
         if ($stmt->execute()) {
-            http_response_code(201);
-            echo json_encode(["status" => 201, "message" => "User created successfully"]);
+            if ($stmt->affected_rows > 0) {
+                 echo json_encode(["status" => 200, "message" => "Updated successfully"]);
+            } else {
+                 // Tidak ada baris yang terpengaruh, mungkin username tidak ditemukan
+                 echo json_encode(["status" => 200, "message" => "No changes made or user not found."]);
+            }
         } else {
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $stmt->error]);
+            error_log("DB Execute Error (PUT user_profiles): " . $stmt->error);
+            echo json_encode(["status" => 500, "error" => "Failed to update user."]);
         }
+        $stmt->close();
         break;
-
-    case 'PUT':
-    $data = json_decode(file_get_contents('php://input'), true);
-    $username = $data['username'];
-
-    // Default value untuk mencegah error null
-    $data['hub_placement'] = $data['hub_placement'] ?? '';
-    $data['gaji_pokok'] = $data['gaji_pokok'] ?? 0;
-
-    $stmt = $conn->prepare("UPDATE user_profiles SET 
-        name=?, dob=?, placement=?, gender=?, lokasi=?, hub_placement=?, status=?,
-        jabatan=?, department=?, klasifikasi_jabatan=?, klasifikasi=?, kepegawaian=?,
-        email=?, phone=?, gaji_pokok=?, divisi=?, section=?, salary_code=?, id_company=? site=?
-        WHERE username=?");
-
-    $stmt->bind_param("ssssssssssssssdssssss",
-        $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'], $data['hub_placement'],
-        $data['status'], $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
-        $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'],
-        $data['gaji_pokok'], // This is the double (d) field
-        $data['divisi'], $data['section'], $data['salary_code'], $data['id_company'], $data['site'], $username
-    );
-
-    if ($stmt->execute()) {
-        echo json_encode(["status" => 200, "message" => "Updated successfully"]);
-    } else {
-        http_response_code(500);
-        echo json_encode(["status" => 500, "error" => $stmt->error]);
-    }
-    break;
 
     case 'DELETE':
         $username = $_GET['username'] ?? '';
@@ -127,16 +240,50 @@ switch ($method) {
             break;
         }
 
-        $stmt = $conn->prepare("DELETE FROM user_profiles WHERE username = ?");
-        $stmt->bind_param("s", $username);
+        // Mulai transaksi
+        $conn->begin_transaction();
+        try {
+            // Hapus dari user_profiles terlebih dahulu
+            $stmt1 = $conn->prepare("DELETE FROM user_profiles WHERE username = ?");
+            if (!$stmt1) {
+                 throw new Exception("Prepare failed for user_profiles delete: " . $conn->error);
+            }
+            $stmt1->bind_param("s", $username);
+            if (!$stmt1->execute()) {
+                 throw new Exception("Execute failed for user_profiles delete: " . $stmt1->error);
+            }
+            $rows_affected_profile = $stmt1->affected_rows;
+            $stmt1->close();
 
-        if ($stmt->execute()) {
-            echo json_encode(["status" => 200, "message" => "User deleted successfully"]);
-        } else {
+            // Kemudian hapus dari users
+            $stmt2 = $conn->prepare("DELETE FROM users WHERE username = ?");
+            if (!$stmt2) {
+                 throw new Exception("Prepare failed for users delete: " . $conn->error);
+            }
+            $stmt2->bind_param("s", $username);
+            if (!$stmt2->execute()) {
+                 throw new Exception("Execute failed for users delete: " . $stmt2->error);
+            }
+            $rows_affected_user = $stmt2->affected_rows;
+            $stmt2->close();
+
+            // Commit transaksi jika keduanya berhasil
+            $conn->commit();
+
+            if ($rows_affected_profile > 0 || $rows_affected_user > 0) {
+                 echo json_encode(["status" => 200, "message" => "User deleted successfully"]);
+            } else {
+                 echo json_encode(["status" => 404, "message" => "User not found"]);
+            }
+
+        } catch (Exception $e) {
+            $conn->rollback();
+            error_log("DB Transaction Error (user deletion): " . $e->getMessage());
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $stmt->error]);
+            echo json_encode(["status" => 500, "error" => "Failed to delete user. Please check server logs."]);
         }
         break;
+
 
     default:
         http_response_code(405);
