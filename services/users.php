@@ -48,30 +48,38 @@ switch ($method) {
         echo json_encode($users);
         break;
 
-    case 'POST':
-        authorize(8, ["admin_absensi"], [], null);
-        $user = verifyToken();
-        $requester_id_company = $user['id_company'] ?? null;
+        case 'POST':
+        // --- Tambahkan Authorization di sini ---
+        authorize(8, ["admin_absensi"], [], null); // Hanya level 8 atau admin_absensi
+        $user = verifyToken(); // Dapatkan info user dari token
+        $requester_id_company = $user['id_company'] ?? null; // Ambil id_company dari requester
 
         if ($requester_id_company === null) {
              http_response_code(403);
              echo json_encode(["status" => 403, "error" => "Access denied. User company information missing."]);
              break;
         }
+        // --- Akhir Penambahan Authorization ---
 
         $data = json_decode(file_get_contents('php://input'), true);
 
+        // Validasi awal
         if (empty($data['username']) || empty($data['name'])) {
             http_response_code(400);
             echo json_encode(["status" => 400, "error" => "Username and name are required"]);
             break;
         }
 
+        // --- Logika Penentuan id_company untuk User Baru ---
+        // Asumsi: Admin hanya bisa membuat user untuk company mereka sendiri.
         $user_id_company = $requester_id_company;
+        // --- Akhir Logika id_company ---
 
+        // Hash password default
         $password = password_hash("password", PASSWORD_BCRYPT);
         $user_level = 9;
 
+        // --- Cek Duplikasi Username ---
         $checkStmt = $conn->prepare("SELECT username FROM users WHERE username = ?");
         $checkStmt->bind_param("s", $data['username']);
         $checkStmt->execute();
@@ -82,10 +90,13 @@ switch ($method) {
              break;
         }
         $checkStmt->close();
+        // --- Akhir Cek Duplikasi ---
 
+        // Mulai transaksi untuk memastikan konsistensi data
         $conn->begin_transaction();
 
         try {
+            // Insert ke tabel `users`
             $stmt1 = $conn->prepare("INSERT INTO users (username, passwd, user_level) VALUES (?, ?, ?)");
             if (!$stmt1) {
                  throw new Exception("Prepare failed for users table: " . $conn->error);
@@ -96,36 +107,25 @@ switch ($method) {
             }
             $stmt1->close();
 
-            // --- Modifikasi Query INSERT untuk menyertakan photo ---
-            // Karena kita menggunakan DEFAULT, kita tidak perlu menyebutkannya secara eksplisit
-            // atau kita bisa menyebutkannya dengan nilai NULL agar default berlaku.
-            // Cara 1 (Lebih aman, biarkan default bekerja): Tidak sebutkan `photo`
-            // $stmt2 = $conn->prepare("INSERT INTO user_profiles (
-            //     username, name, dob, placement, gender, lokasi, hub_placement, status,
-            //     jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
-            //     email, phone, gaji_pokok, divisi, section, salary_code, site, id_company
-            // ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            // Cara 2 (Eksplisit, tetapi tetap gunakan default): Sebutkan `photo` dan beri nilai NULL
+            // --- Modifikasi Query INSERT untuk menyertakan photo dengan nilai 'default.jpeg' ---
             $stmt2 = $conn->prepare("INSERT INTO user_profiles (
                 username, name, dob, placement, gender, lokasi, hub_placement, status,
                 jabatan, department, klasifikasi_jabatan, klasifikasi, kepegawaian,
-                email, phone, gaji_pokok, divisi, section, salary_code, site, id_company, photo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)"); // <-- Tambahkan photo dan NULL
+                email, phone, gaji_pokok, divisi, section, salary_code, site, id_company, photo -- Tambahkan photo
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"); // Tambahkan placeholder ?
 
             if (!$stmt2) {
                  throw new Exception("Prepare failed for user_profiles table: " . $conn->error);
             }
 
-            // --- Perbarui bind_param sesuai dengan query baru ---
-            // Jika menggunakan Cara 1 (tanpa photo di VALUES):
-            // $stmt2->bind_param("sssssssssssssssdssssi", ...);
-            // Jika menggunakan Cara 2 (dengan photo=NULL di VALUES):
-            // Jumlah parameter tetap 21, bind_param tetap 21 karakter
-            $stmt2->bind_param("sssssssssssssssdsssii", // <-- Jumlah karakter tetap sesuai parameter
+            // --- Perbarui bind_param: Tambahkan 's' di akhir untuk photo (string) ---
+            // Urutan: 20 's' awal + 1 'd' (gaji_pokok) + 1 's' (site) + 1 'i' (id_company) + 1 's' (photo)
+            $stmt2->bind_param("sssssssssssssssdsssiss", // <-- 22 karakter: 20s + 1d + 1s + 1i + 1s (photo)
                 $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
                 $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
                 $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
-                $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $user_id_company // photo=NULL tidak perlu bind_param
+                $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $user_id_company,
+                'default.jpeg' // <-- Nilai tetap untuk photo
             );
 
             if (!$stmt2->execute()) {
@@ -133,6 +133,7 @@ switch ($method) {
             }
             $stmt2->close();
 
+            // Jika semua berhasil, commit transaksi
             $conn->commit();
 
             http_response_code(201);
@@ -143,9 +144,14 @@ switch ($method) {
             ]);
 
         } catch (Exception $e) {
+            // Jika ada error, rollback transaksi
             $conn->rollback();
+
+            // Log error untuk debugging (jangan tampilkan ke user di production)
             error_log("DB Transaction Error (user creation): " . $e->getMessage());
+
             http_response_code(500);
+            // Kembalikan pesan umum ke frontend
             echo json_encode(["status" => 500, "error" => "Failed to create user. Please check server logs."]);
         }
 
