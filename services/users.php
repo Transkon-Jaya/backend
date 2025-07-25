@@ -118,14 +118,17 @@ switch ($method) {
                  throw new Exception("Prepare failed for user_profiles table: " . $conn->error);
             }
 
-            // --- Perbarui bind_param: Tambahkan 's' di akhir untuk photo (string) ---
-            // Urutan: 20 's' awal + 1 'd' (gaji_pokok) + 1 's' (site) + 1 'i' (id_company) + 1 's' (photo)
-            $stmt2->bind_param("sssssssssssssssdsssiss", // <-- 22 karakter: 20s + 1d + 1s + 1i + 1s (photo)
-                $data['username'], $data['name'], $data['dob'], $data['placement'], $data['gender'], $data['lokasi'],
-                $data['hub_placement'], $data['status'], $data['jabatan'], $data['department'],
-                $data['klasifikasi_jabatan'], $data['klasifikasi'], $data['kepegawaian'],
-                $data['email'], $data['phone'], $data['gaji_pokok'], $data['divisi'], $data['section'], $data['salary_code'], $data['site'], $user_id_company,
-                'default.jpeg' // <-- Nilai tetap untuk photo
+           $stmt2->bind_param(
+                "sssssssssssssssdsssiss", // <-- Perbaiki menjadi 22 karakter yang benar
+                $data['username'], $data['name'], $data['dob'], $data['placement'],
+                $data['gender'], $data['lokasi'], $data['hub_placement'], $data['status'],
+                $data['jabatan'], $data['department'], $data['klasifikasi_jabatan'],
+                $data['klasifikasi'], $data['kepegawaian'], $data['email'], $data['phone'], // 15 's'
+                $data['gaji_pokok'], // 1 'd'
+                $data['divisi'], $data['section'], $data['salary_code'], // 3 's'
+                $data['site'], // 1 's' 
+                $user_id_company, // 1 'i'
+                'default.jpeg' // 1 's'
             );
 
             if (!$stmt2->execute()) {
