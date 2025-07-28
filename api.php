@@ -42,6 +42,7 @@ $allowed_routes = [
     'asset-stocks'    => 'services/assets/stocks.php',
     'asset-upload'   => 'services/assets/upload.php',
     'asset-dropdown'   => 'services/assets/dropdown.php',
+    'score'            => 'services/assets/score.php',
     'asset-stock-history' => 'services/assets/stock-history.php'
 ];
 
