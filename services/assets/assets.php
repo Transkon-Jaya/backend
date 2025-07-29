@@ -42,17 +42,17 @@ try {
         $purchase_date = $input['purchase_date'] ?? null;
 
         $stmt->bind_param(
-            "ssisdsiis",  // 9 parameter: name, code, cat_id, status, value, date, loc_id, dept_id, spec
-            $input['name'],
-            $input['code'],
-            $input['category_id'],
-            $input['status'],
-            $input['purchase_value'] ?? 0,
-            $purchase_date,
-            $input['location_id'] ?? null,
-            $input['department_id'] ?? null,
-            $spec
-        );
+        "ssisdsiis",  // 9 parameter: name, code, cat_id, status, value, date, loc_id, dept_id, spec
+        $input['name'],
+        $input['code'],
+        $input['category_id'],
+        $input['status'],
+        $input['purchase_value'] ?? 0,
+        $purchase_date,
+        $input['location_id'] ?? null,
+        $input['department_id'] ?? null,
+        $spec
+    );
 
         $stmt->execute();
         $insertId = $stmt->insert_id;
@@ -176,14 +176,11 @@ try {
         $params = [];
         $types = '';
 
-                   
-            /*
-            if ($id_company) {
-                $conditions[] = "a.id_company = ?";
-                $params[] = $id_company;
-                $types .= 'i';
-            }
-            */
+        if ($id_company) {
+            $conditions[] = "a.id_company = ?";
+            $params[] = $id_company;
+            $types .= 'i';
+        }
 
         if ($search) {
             $conditions[] = "(a.name LIKE ? OR a.description LIKE ? OR a.serial_number LIKE ?)";
