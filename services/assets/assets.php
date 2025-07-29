@@ -3,6 +3,7 @@ header("Content-Type: application/json");
 require 'db.php';
 require 'auth.php';
 
+
 $method = $_SERVER['REQUEST_METHOD'];
 $id = $_GET['id'] ?? ($_POST['id'] ?? null);
 
@@ -14,28 +15,6 @@ $status   = $_GET['status'] ?? null;
 
 try {
     $conn->autocommit(false);
-
-    // =============================
-    // === GET /assets/locations ===
-    // =============================
-    if ($method === 'GET' && isset($_GET['get_locations'])) {
-        $sql = "SELECT id, name FROM asset_locations ORDER BY name";
-        $stmt = $conn->prepare($sql);
-        $stmt->execute();
-        
-        $result = $stmt->get_result();
-        $locations = [];
-        while ($row = $result->fetch_assoc()) {
-            $locations[] = $row;
-        }
-        
-        $conn->commit();
-        echo json_encode([
-            "status" => 200,
-            "data" => $locations
-        ]);
-        exit;
-    }
 
     // ========================
     // === POST (Create) ======
@@ -63,7 +42,7 @@ try {
         $purchase_date = $input['purchase_date'] ?? null;
 
         $stmt->bind_param(
-            "ssisdsiis",
+            "ssisdsiis",  // 9 parameter: name, code, cat_id, status, value, date, loc_id, dept_id, spec
             $input['name'],
             $input['code'],
             $input['category_id'],
@@ -94,7 +73,7 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['code', 'name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
         $set = [];
         $params = [];
         $types = '';
@@ -102,11 +81,10 @@ try {
         foreach ($fields as $field) {
             if (array_key_exists($field, $input)) {
                 $set[] = "$field = ?";
-                $value = $field === 'specifications' && is_array($input[$field])
+                $params[] = $field === 'specifications' && is_array($input[$field])
                     ? json_encode($input[$field])
                     : $input[$field];
-                $params[] = $value;
-                $types .= (is_numeric($value) && !is_string($value)) ? 'd' : 's';
+                $types .= is_numeric(end($params)) ? 'd' : 's';
             }
         }
 
@@ -198,8 +176,14 @@ try {
         $params = [];
         $types = '';
 
-        // Hapus filter id_company karena tidak digunakan
-        // if ($id_company) { ... }
+                   
+            /*
+            if ($id_company) {
+                $conditions[] = "a.id_company = ?";
+                $params[] = $id_company;
+                $types .= 'i';
+            }
+            */
 
         if ($search) {
             $conditions[] = "(a.name LIKE ? OR a.description LIKE ? OR a.serial_number LIKE ?)";
@@ -271,4 +255,27 @@ try {
     ]);
 } finally {
     $conn->close();
+}
+
+// =============================
+// === GET /assets/locations ===
+// =============================
+if ($method === 'GET' && isset($_GET['get_locations'])) {
+    $sql = "SELECT id, name FROM asset_locations WHERE id = ? ORDER BY name";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id_company);
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $locations = [];
+    while ($row = $result->fetch_assoc()) {
+        $locations[] = $row;
+    }
+    
+    $conn->commit();
+    echo json_encode([
+        "status" => 200,
+        "data" => $locations
+    ]);
+    exit;
 }
