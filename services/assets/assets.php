@@ -23,13 +23,13 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $required = ['name', 'category', 'status'];
+        $required = ['name', 'category_id', 'status'];
         foreach ($required as $key) {
             if (empty($input[$key])) throw new Exception("Field $key wajib diisi", 400);
         }
 
         $sql = "INSERT INTO assets 
-            (name,code, category, status, purchase_value, purchase_date, location_id, department_id, specifications, id_company)
+            (name,code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, id_company)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
@@ -45,7 +45,7 @@ try {
             "sisdsissi",
             $input['code'],
             $input['name'],
-            $input['category'],
+            $input['category_id'],
             $input['status'],
             $input['purchase_value'] ?? 0,
             $purchase_date,
@@ -74,7 +74,7 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['code','name', 'category', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
         $set = [];
         $params = [];
         $types = '';
@@ -135,6 +135,7 @@ try {
                 l.name as location_name,
                 d.name as department_name
             FROM assets a
+            LEFT JOIN asset_categories c ON a.category_id = c.id
             LEFT JOIN asset_locations l ON a.location_id = l.id
             LEFT JOIN asset_departments d ON a.department_id = d.id
             WHERE a.id = ?
@@ -166,6 +167,7 @@ try {
                 l.name as location_name,
                 d.name as department_name
             FROM assets a
+            LEFT JOIN asset_categories c ON a.category_id = c.id
             LEFT JOIN asset_locations l ON a.location_id = l.id
             LEFT JOIN asset_departments d ON a.department_id = d.id
             WHERE 1=1
@@ -189,7 +191,7 @@ try {
         }
 
         if ($category) {
-            $conditions[] = "a.category = ?";
+            $conditions[] = "a.category_id = ?";
             $params[] = $category;
             $types .= 'i';
         }
