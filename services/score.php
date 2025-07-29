@@ -1,8 +1,7 @@
 <?php
-// api/score.php
 header("Content-Type: application/json");
-require 'db.php'; // Pastikan path ini benar relatif terhadap score.php
-require 'auth.php'; // Pastikan path ini benar relatif terhadap score.php
+require 'db.php';
+require 'auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
