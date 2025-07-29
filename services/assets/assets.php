@@ -29,8 +29,8 @@ try {
         }
 
         $sql = "INSERT INTO assets 
-            (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            (name,code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, id_company)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
@@ -42,17 +42,18 @@ try {
         $purchase_date = $input['purchase_date'] ?? null;
 
         $stmt->bind_param(
-        "ssisdsiis",  // 9 parameter: name, code, cat_id, status, value, date, loc_id, dept_id, spec
-        $input['name'],
-        $input['code'],
-        $input['category_id'],
-        $input['status'],
-        $input['purchase_value'] ?? 0,
-        $purchase_date,
-        $input['location_id'] ?? null,
-        $input['department_id'] ?? null,
-        $spec
-    );
+            "sisdsissi",
+            $input['code'],
+            $input['name'],
+            $input['category_id'],
+            $input['status'],
+            $input['purchase_value'] ?? 0,
+            $purchase_date,
+            $input['location_id'] ?? null,
+            $input['department_id'] ?? null,
+            $spec,
+            $id_company
+        );
 
         $stmt->execute();
         $insertId = $stmt->insert_id;
