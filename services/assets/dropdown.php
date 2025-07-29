@@ -7,7 +7,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 try {
     if ($method === 'GET' && isset($_GET['get_locations'])) {
-        // ✅ Hapus WHERE id_company karena kolom tidak ada
         $sql = "SELECT id, name FROM asset_locations WHERE is_active = 1 ORDER BY name";
         $stmt = $conn->prepare($sql);
         
