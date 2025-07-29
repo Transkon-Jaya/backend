@@ -9,7 +9,7 @@ $id_company = $_SESSION['user']['id_company'] ?? null;
 try {
     // Locations Endpoint
     if ($method === 'GET' && isset($_GET['get_locations'])) {
-        $sql = "SELECT id, name FROM asset_locations WHERE id = ? ORDER BY name";
+        $sql = "SELECT id, name FROM asset_locations WHERE id_company = ? ORDER BY name";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $id_company);
         $stmt->execute();
