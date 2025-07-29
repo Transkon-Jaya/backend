@@ -41,26 +41,65 @@ try {
             $conn->begin_transaction();
 
             try {
-                // Simpan skor ke database
-                $stmt = $conn->prepare("INSERT INTO scores (username, wpm, created_at) VALUES (?, ?, NOW())");
-                if (!$stmt) {
-                    throw new Exception("Prepare failed for INSERT score: " . $conn->error);
+                // 1. Cek apakah user sudah punya score sebelumnya
+                $stmtCheck = $conn->prepare("SELECT wpm FROM scores WHERE username = ? ORDER BY wpm DESC LIMIT 1");
+                if (!$stmtCheck) {
+                    throw new Exception("Prepare failed for SELECT score: " . $conn->error);
                 }
-                $stmt->bind_param("si", $username, $wpm);
+                $stmtCheck->bind_param("s", $username);
+                
+                if (!$stmtCheck->execute()) {
+                    throw new Exception("Execute failed for SELECT score: " . $stmtCheck->error);
+                }
+                
+                $result = $stmtCheck->get_result();
+                $existingScore = $result->fetch_assoc();
+                $stmtCheck->close();
 
-                if (!$stmt->execute()) {
-                    throw new Exception("Execute failed for INSERT score: " . $stmt->error);
+                // 2. Jika sudah ada dan score baru lebih tinggi, update
+                if ($existingScore && $wpm > $existingScore['wpm']) {
+                    $stmtUpdate = $conn->prepare("UPDATE scores SET wpm = ?, created_at = NOW() WHERE username = ? AND wpm = ?");
+                    if (!$stmtUpdate) {
+                        throw new Exception("Prepare failed for UPDATE score: " . $conn->error);
+                    }
+                    $stmtUpdate->bind_param("isi", $wpm, $username, $existingScore['wpm']);
+                    
+                    if (!$stmtUpdate->execute()) {
+                        throw new Exception("Execute failed for UPDATE score: " . $stmtUpdate->error);
+                    }
+                    $stmtUpdate->close();
+                    
+                    $message = "Higher score updated successfully";
+                } 
+                // 3. Jika belum ada score, insert baru
+                elseif (!$existingScore) {
+                    $stmtInsert = $conn->prepare("INSERT INTO scores (username, wpm, created_at) VALUES (?, ?, NOW())");
+                    if (!$stmtInsert) {
+                        throw new Exception("Prepare failed for INSERT score: " . $conn->error);
+                    }
+                    $stmtInsert->bind_param("si", $username, $wpm);
+                    
+                    if (!$stmtInsert->execute()) {
+                        throw new Exception("Execute failed for INSERT score: " . $stmtInsert->error);
+                    }
+                    $stmtInsert->close();
+                    
+                    $message = "Score saved successfully";
                 }
-                $stmt->close();
+                // 4. Jika score baru tidak lebih tinggi, tidak lakukan apa-apa
+                else {
+                    $message = "Existing score is higher, no update needed";
+                }
 
                 // Jika berhasil sampai sini, commit transaksi
                 $conn->commit();
 
-                http_response_code(200); // Atau 201 Created
+                http_response_code(200);
                 echo json_encode([
-                    "status" => 200, // Atau 201
-                    "message" => "Score saved successfully"
-                    // Anda bisa menambahkan data lain jika perlu, misalnya ID skor yang baru saja disimpan
+                    "status" => 200,
+                    "message" => $message,
+                    "current_score" => $wpm,
+                    "highest_score" => $existingScore ? max($existingScore['wpm'], $wpm) : $wpm
                 ]);
                 exit();
 
@@ -77,24 +116,19 @@ try {
 
         case 'GET':
             // --- Ambil Leaderboard ---
-            // Optional: Highlight user yang login
-            // $user = verifyToken();
-            // $currentUsername = ($user && isset($user['username'])) ? $user['username'] : null;
-
             // Ambil parameter limit dari query string (default 10, max 100)
             $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
             if ($limit <= 0 || $limit > 100) {
                 $limit = 10;
             }
 
-            // Query untuk mendapatkan leaderboard berdasarkan WPM tertinggi
-            // Ini menampilkan semua skor, termasuk beberapa skor dari user yang sama
-            // Jika ingin satu skor terbaik per user, gunakan query dengan subquery atau view
+            // Query untuk mendapatkan leaderboard dengan skor tertinggi per user
             $sql_leaderboard = "
-                SELECT s.username, u.name, s.wpm, s.created_at
+                SELECT s.username, u.name, MAX(s.wpm) as wpm, MAX(s.created_at) as created_at
                 FROM scores s
                 JOIN user_profiles u ON s.username = u.username
-                ORDER BY s.wpm DESC, s.created_at ASC
+                GROUP BY s.username, u.name
+                ORDER BY wpm DESC, created_at ASC
                 LIMIT ?
             ";
 
@@ -135,10 +169,46 @@ try {
                 $previous_wpm = $player['wpm'];
             }
 
+            // Tambahkan info user yang sedang login jika ada
+            $user = verifyToken();
+            if ($user && isset($user['username'])) {
+                $currentUsername = $user['username'];
+                
+                // Cari apakah user ada di leaderboard
+                $userInLeaderboard = false;
+                foreach($leaderboard as $entry) {
+                    if ($entry['username'] === $currentUsername) {
+                        $userInLeaderboard = true;
+                        break;
+                    }
+                }
+                
+                // Jika tidak ada di leaderboard, ambil score tertinggi user
+                if (!$userInLeaderboard) {
+                    $stmtUser = $conn->prepare("SELECT MAX(wpm) as wpm FROM scores WHERE username = ?");
+                    $stmtUser->bind_param("s", $currentUsername);
+                    if ($stmtUser->execute()) {
+                        $result = $stmtUser->get_result();
+                        $userScore = $result->fetch_assoc();
+                        $stmtUser->close();
+                        
+                        if ($userScore['wpm']) {
+                            // Tambahkan info user di luar leaderboard
+                            $response['user_info'] = [
+                                'username' => $currentUsername,
+                                'wpm' => $userScore['wpm'],
+                                'message' => 'Your highest score is not in top ' . $limit
+                            ];
+                        }
+                    }
+                }
+            }
+
             http_response_code(200);
             echo json_encode([
                 "status" => 200,
-                "data" => $leaderboard
+                "data" => $leaderboard,
+                "user_info" => $response['user_info'] ?? null
             ]);
             exit();
 
@@ -159,9 +229,6 @@ try {
     exit();
 } finally {
     // Tutup koneksi database jika sudah tidak digunakan
-    // Perhatikan: Jika $conn digunakan di tempat lain setelah script ini,
-    // mungkin tidak perlu ditutup di sini.
-    // Namun, jika ini adalah endpoint API mandiri, menutupnya adalah praktik yang baik.
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->close();
     }
