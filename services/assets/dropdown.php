@@ -1,17 +1,17 @@
 <?php
 header("Content-Type: application/json");
-require 'db.php';  // Adjust path as needed
-require 'auth.php'; // Adjust path as needed
+require 'db.php';
+require 'auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-$id_company = $_SESSION['user']['id_company'] ?? null;
 
 try {
-    // Locations Endpoint
     if ($method === 'GET' && isset($_GET['get_locations'])) {
-        $sql = "SELECT id, name FROM asset_locations WHERE id_company = ? ORDER BY name";
+        // ✅ Hapus WHERE id_company karena kolom tidak ada
+        $sql = "SELECT id, name FROM asset_locations WHERE is_active = 1 ORDER BY name";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $id_company);
+        
+        // ❌ Tidak perlu bind param lagi
         $stmt->execute();
         
         $result = $stmt->get_result();
@@ -26,8 +26,6 @@ try {
         ]);
         exit;
     }
-
-    // Add other dropdown endpoints here...
 
     http_response_code(405);
     echo json_encode([
