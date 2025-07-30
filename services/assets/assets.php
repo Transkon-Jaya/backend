@@ -87,6 +87,9 @@ try {
             // Kita biarkan saja, simpan sebagai string
         }
     }
+    if ($specifications && strlen($specifications) > 255) {
+    $specifications = substr($specifications, 0, 255); 
+    }
 
     // Insert ke database
     $sql = "INSERT INTO assets 
@@ -150,12 +153,22 @@ try {
         foreach ($fields as $field) {
             if (array_key_exists($field, $input)) {
                 $set[] = "$field = ?";
-                $params[] = $field === 'specifications' && is_array($input[$field])
-                    ? json_encode($input[$field])
-                    : $input[$field];
-                $types .= is_numeric(end($params)) ? 'd' : 's';
+
+                 if ($field === 'specifications') {
+            $value = is_array($input[$field]) ? json_encode($input[$field]) : $input[$field];
+            if (strlen($value) > 255) {
+                $value = substr($value, 0, 255); // Potong teks
+                // Atau bisa juga beri error:
+                // throw new Exception("Spesifikasi terlalu panjang. Maksimal 255 karakter", 400);
             }
+            $params[] = $value;
+        } else {
+            $params[] = $input[$field];
         }
+        
+        $types .= is_numeric(end($params)) ? 'd' : 's';
+    }
+}
 
         if (empty($set)) {
             throw new Exception("Tidak ada data untuk diperbarui", 400);
