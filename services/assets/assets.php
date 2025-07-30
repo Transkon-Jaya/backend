@@ -129,6 +129,7 @@ try {
             "id" => $insertId,
             "name" => $name,
             "code" => $code,
+            "specifications" => $specifications,
             "image_path" => $imagePath
         ]
     ]);
@@ -301,9 +302,9 @@ try {
         $result = $stmt->get_result();
         $items = [];
         while ($row = $result->fetch_assoc()) {
-            if (!empty($row['specifications'])) {
-                $row['specifications'] = json_decode($row['specifications'], true);
-            }
+            // if (!empty($row['specifications'])) {
+            //     $row['specifications'] = json_decode($row['specifications'], true);
+            // }
             $items[] = $row;
         }
 
