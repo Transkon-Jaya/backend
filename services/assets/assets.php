@@ -21,72 +21,99 @@ try {
     // ========================
     if ($method === 'POST') {
     $input = [];
+    $imagePath = null;
 
-    // Cek apakah ini form-data (upload file)
-    if (strpos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') !== false) {
+    // Cek apakah ini multipart/form-data (upload file)
+    if (strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
         // Ambil data dari $_POST
         $input = $_POST;
 
-        // Handle file upload jika ada
+        // Handle upload gambar
         if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
             $uploadDir = 'uploads/assets/';
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
 
-            $fileName = uniqid() . '_' . basename($_FILES['image']['name']);
+            $fileName = uniqid('asset_') . '_' . basename($_FILES['image']['name']);
             $targetPath = $uploadDir . $fileName;
 
             if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
-                $input['image_path'] = $targetPath;
+                $imagePath = $fileName; // simpan nama file saja, atau path relatif
             } else {
                 throw new Exception("Gagal upload gambar", 500);
             }
         }
     } 
-    // Jika JSON
+    // Jika JSON (untuk testing)
     else {
         $json = json_decode(file_get_contents("php://input"), true);
-        if (!is_array($json)) throw new Exception("Input tidak valid", 400);
+        if (!is_array($json)) {
+            throw new Exception("Input tidak valid", 400);
+        }
         $input = $json;
+        $imagePath = $input['image_path'] ?? null;
     }
 
     // Validasi field wajib
     $required = ['name', 'category_id', 'status'];
-    foreach ($required as $key) {
-        if (empty($input[$key])) {
-            throw new Exception("Field $key wajib diisi", 400);
+    foreach ($required as $field) {
+        if (empty($input[$field])) {
+            throw new Exception("Field $field wajib diisi", 400);
         }
     }
 
     // Siapkan data
-    $spec = isset($input['specifications']) ? $input['specifications'] : null; // string biasa
-    $purchase_date = $input['purchase_date'] ?? null;
+    $code = $input['code'] ?? null;
+    $name = $input['name'];
+    $categoryId = $input['category_id'];
+    $status = $input['status'];
+    $purchaseValue = $input['purchase_value'] ?? 0;
+    $purchaseDate = $input['purchase_date'] ?? null;
+    $locationId = $input['location_id'] ?? null;
+    $departmentId = $input['department_id'] ?? null;
+    $specifications = $input['specifications'] ?? null; // string biasa
 
+    // Insert ke database
     $sql = "INSERT INTO assets 
         (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    
+
     $stmt = $conn->prepare($sql);
-    if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
+    if (!$stmt) {
+        throw new Exception("Prepare gagal: " . $conn->error);
+    }
 
     $stmt->bind_param(
         "ssisdsiiss",
-        $input['name'],
-        $input['code'] ?? null,
-        $input['category_id'],
-        $input['status'],
-        $input['purchase_value'] ?? 0,
-        $purchase_date,
-        $input['location_id'] ?? null,
-        $input['department_id'] ?? null,
-        $spec, // string biasa, bukan JSON
-        $input['image_path'] ?? null
+        $name,
+        $code,
+        $categoryId,
+        $status,
+        $purchaseValue,
+        $purchaseDate,
+        $locationId,
+        $departmentId,
+        $specifications,
+        $imagePath
     );
 
     $stmt->execute();
     $insertId = $stmt->insert_id;
 
     $conn->commit();
-    echo json_encode(["status" => 201, "message" => "Asset berhasil ditambahkan", "id" => $insertId]);
+
+    echo json_encode([
+        "status" => 201,
+        "message" => "Asset berhasil ditambahkan",
+        "id" => $insertId,
+        "data" => [
+            "id" => $insertId,
+            "name" => $name,
+            "code" => $code,
+            "image_path" => $imagePath
+        ]
+    ]);
     exit;
 }
     // ====================
