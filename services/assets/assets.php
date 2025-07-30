@@ -72,7 +72,16 @@ try {
     $purchaseDate = $input['purchase_date'] ?? null;
     $locationId = $input['location_id'] ?? null;
     $departmentId = $input['department_id'] ?? null;
-    $specifications = $input['specifications'] ?? null; // string biasa
+    $specifications = $input['specifications'] ?? null;
+    if (is_array($specifications)) {
+    $specifications = json_encode($specifications);
+    } elseif (is_string($specifications)) {
+    // Validasi apakah string ini JSON? Opsional
+    json_decode($specifications);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception("Spesifikasi harus berupa JSON yang valid", 400);
+    }
+    }
 
     // Insert ke database
     $sql = "INSERT INTO assets 
