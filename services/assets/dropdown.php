@@ -1,50 +1,42 @@
 <?php
 header("Content-Type: application/json");
-require 'db.php';
-require 'auth.php';
+require 'db.php';     
+require 'auth.php';     
+
+authorize(5, ["admin_asset"], [], null);
+$user = verifyToken();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
-    if ($method === 'GET' && isset($_GET['get_dropdowns'])) {
-        // Ambil lokasi
-        $sqlLocation = "SELECT id, name FROM asset_locations WHERE is_active = 1 ORDER BY name";
-        $stmtLocation = $conn->prepare($sqlLocation);
-        $stmtLocation->execute();
-        $resultLocation = $stmtLocation->get_result();
-        $locations = [];
-        while ($row = $resultLocation->fetch_assoc()) {
-            $locations[] = $row;
-        }
-
-        // Ambil user
-        $sqlUser = "SELECT name FROM user_profiles WHERE id_company = '1' ORDER BY name";
-        $stmtUser = $conn->prepare($sqlUser);
-        $stmtUser->execute();
-        $resultUser = $stmtUser->get_result();
-        $users = [];
-        while ($row = $resultUser->fetch_assoc()) {
-            $users[] = $row;
-        }
-
-        echo json_encode([
-            "status" => 200,
-            "locations" => $locations,
-            "users" => $users
-        ]);
-        exit;
+    if ($method !== 'GET') {
+        throw new Exception("Method not allowed", 405);
     }
 
-    http_response_code(405);
-    echo json_encode([
-        "status" => 405,
-        "error" => "Method not allowed or invalid parameters"
-    ]);
+    $conn->autocommit(false);
 
-} catch (Exception $e) {
-    http_response_code(500);
+    $sql = "SELECT id, name FROM asset_locations ORDER BY name ASC";
+    $result = $conn->query($sql);
+    if (!$result) throw new Exception("Query failed: " . $conn->error);
+
+    $categories = [];
+    while ($row = $result->fetch_assoc()) {
+        $categories[] = $row;
+    }
+
+    $conn->commit();
+
     echo json_encode([
-        "status" => 500,
+        "status" => 200,
+        "data" => $categories
+    ]);
+} catch (Exception $e) {
+    $conn->rollback();
+    http_response_code($e->getCode() ?: 500);
+    echo json_encode([
+        "status" => $e->getCode() ?: 500,
         "error" => $e->getMessage()
     ]);
+} finally {
+    $conn->close();
 }
