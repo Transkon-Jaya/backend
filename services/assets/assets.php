@@ -229,7 +229,8 @@ try {
         if (!$asset) throw new Exception("Asset tidak ditemukan", 404);
 
         if (!empty($asset['specifications'])) {
-            $asset['specifications'] = json_decode($asset['specifications'], true);
+            $specs = json_decode($asset['specifications'], true);
+            $asset['specifications'] = (json_last_error() === JSON_ERROR_NONE) ? $specs : $asset['specifications'];
         }
 
         echo json_encode(["status" => 200, "data" => $asset]);
