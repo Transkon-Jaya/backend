@@ -5,7 +5,7 @@ require 'auth.php';
 require 'utils/compressResize.php';
 
 // Cek token dan hak akses
-authorize(5, ["admin_asset"], [], null);
+authorize(9, ["admin_asset"], [], null);
 $user = verifyToken();
 
 $uploadDir = "/var/www/html/uploads/assets/";

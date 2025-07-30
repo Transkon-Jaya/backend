@@ -3,7 +3,7 @@ header("Content-Type: application/json");
 require 'db.php';     
 require 'auth.php';     
 
-authorize(5, ["admin_asset"], [], null);
+authorize(9, ["admin_asset"], [], null);
 $user = verifyToken();
 
 $method = $_SERVER['REQUEST_METHOD'];
