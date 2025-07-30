@@ -73,14 +73,18 @@ try {
     $locationId = $input['location_id'] ?? null;
     $departmentId = $input['department_id'] ?? null;
     $specifications = $input['specifications'] ?? null;
+
+    // Jika specifications adalah array (misal dari form JSON), encode ke string
     if (is_array($specifications)) {
-    $specifications = json_encode($specifications);
-    } elseif (is_string($specifications)) {
-    // Validasi apakah string ini JSON? Opsional
-    json_decode($specifications);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception("Spesifikasi harus berupa JSON yang valid", 400);
-    }
+        $specifications = json_encode($specifications);
+    } 
+    // Jika string, pastikan valid JSON (opsional)
+    elseif ($specifications && is_string($specifications)) {
+        json_decode($specifications);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Bisa pilih: tolak atau biarkan sebagai string biasa
+            // Kita biarkan saja, simpan sebagai string
+        }
     }
 
     // Insert ke database
