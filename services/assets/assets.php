@@ -73,6 +73,7 @@ try {
     $locationId = $input['location_id'] ?? null;
     $departmentId = $input['department_id'] ?? null;
     $specifications = $input['specifications'] ?? null;
+    $user = $input['user'];
 
     // Jika specifications adalah array (misal dari form JSON), encode ke string
     if (is_array($specifications)) {
@@ -89,8 +90,8 @@ try {
 
     // Insert ke database
     $sql = "INSERT INTO assets 
-        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -98,7 +99,7 @@ try {
     }
 
     $stmt->bind_param(
-        "ssisdsiiss",
+        "ssisdsiisss",
         $name,
         $code,
         $categoryId,
@@ -108,7 +109,8 @@ try {
         $locationId,
         $departmentId,
         $specifications,
-        $imagePath
+        $imagePath,
+        $user
     );
 
     $stmt->execute();
@@ -140,7 +142,7 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications'];
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user'];
         $set = [];
         $params = [];
         $types = '';
