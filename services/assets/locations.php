@@ -19,16 +19,16 @@ try {
     $result = $conn->query($sql);
     if (!$result) throw new Exception("Query failed: " . $conn->error);
 
-    $categories = [];
+    $locations = [];
     while ($row = $result->fetch_assoc()) {
-        $categories[] = $row;
+        $locations[] = $row;
     }
 
     $conn->commit();
 
     echo json_encode([
         "status" => 200,
-        "data" => $categories
+        "data" => $locations
     ]);
 } catch (Exception $e) {
     $conn->rollback();
