@@ -199,14 +199,14 @@ try {
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
 
-          // ==================================================
-    // === 📝 CATAT PERUBAHAN DI asset_movements DI SINI ===
+    // ==================================================
+    // === 📝 CATAT PERUBAHAN DI asset_stock_movements  DI SINI ===
     // ==================================================
     $userId = $user['id'] ?? 1; // dari auth.php, atau default 1
 
     // 1. Jika lokasi berubah → catat sebagai 'transfer'
     if (isset($input['location_id']) && $input['location_id'] != $oldData['location_id']) {
-        $movementSql = "INSERT INTO asset_movements 
+        $movementSql = "INSERT INTO asset_stock_movements 
             (asset_id, movement_type, quantity, from_location_id, to_location_id, notes, created_by) 
             VALUES (?, 'transfer', 1, ?, ?, ?, ?)";
         $fromLoc = $oldData['location_id'];
@@ -220,7 +220,7 @@ try {
 
     // 2. Jika status berubah → catat sebagai 'adjustment'
     if (isset($input['status']) && $input['status'] !== $oldData['status']) {
-        $movementSql = "INSERT INTO asset_movements 
+        $movementSql = "INSERT INTO asset_stock_movements 
             (asset_id, movement_type, quantity, notes, created_by) 
             VALUES (?, 'adjustment', 1, ?, ?)";
         $notes = "Status berubah dari '{$oldData['status']}' ke '{$input['status']}'";
@@ -232,7 +232,7 @@ try {
 
     // 3. Jika user berubah → catat sebagai 'adjustment'
     if (isset($input['user']) && $input['user'] !== $oldData['user']) {
-        $movementSql = "INSERT INTO asset_movements 
+        $movementSql = "INSERT INTO asset_stock_movements 
             (asset_id, movement_type, quantity, notes, created_by) 
             VALUES (?, 'adjustment', 1, ?, ?)";
         $notes = "User berubah dari '{$oldData['user']}' ke '{$input['user']}'";
