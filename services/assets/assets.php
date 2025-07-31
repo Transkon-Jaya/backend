@@ -5,6 +5,21 @@ require 'auth.php';
 
 
 $method = $_SERVER['REQUEST_METHOD'];
+// 🌐 Override _method dari POST/JSON agar bisa DELETE
+$originalMethod = $method;
+if ($method === 'POST') {
+    $overrideMethod = $_POST['_method'] ?? $_GET['_method'] ?? null;
+
+    if (!$overrideMethod) {
+        $body = json_decode(file_get_contents("php://input"), true);
+        $overrideMethod = $body['_method'] ?? null;
+    }
+
+    if ($overrideMethod) {
+        $method = strtoupper($overrideMethod);
+    }
+}
+
 $id = $_GET['id'] ?? ($_POST['id'] ?? null);
 
 $page     = max(1, (int)($_GET['page'] ?? 1));
