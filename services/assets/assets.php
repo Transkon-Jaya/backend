@@ -190,22 +190,45 @@ try {
     }
 
     // =====================
-    // === DELETE /{id} ====
-    // =====================
-    if ($method === 'DELETE') {
-        if (!$id || !is_numeric($id)) {
+// === DELETE /assets/{id} ====
+// =====================
+if ($method === 'DELETE') {
+    // Pastikan path adalah /assets/{id}
+    if (strpos($_SERVER['REQUEST_URI'], '/assets/') !== false) {
+        $id = explode('/assets/', $_SERVER['REQUEST_URI'])[1];
+        $id = intval($id); // Pastikan ID numeric
+        
+        if (!$id) {
             throw new Exception("ID asset tidak valid", 400);
         }
 
+        // Cek apakah asset ada
+        $check = $conn->prepare("SELECT id FROM assets WHERE id = ?");
+        $check->bind_param("i", $id);
+        $check->execute();
+        
+        if ($check->get_result()->num_rows === 0) {
+            throw new Exception("Asset tidak ditemukan", 404);
+        }
+
+        // Lakukan delete
         $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
 
+        if ($stmt->affected_rows === 0) {
+            throw new Exception("Gagal menghapus asset", 500);
+        }
+
         $conn->commit();
-        echo json_encode(["status" => 200, "message" => "Asset berhasil dihapus"]);
+        echo json_encode([
+            "status" => 200, 
+            "message" => "Asset berhasil dihapus",
+            "deleted_id" => $id
+        ]);
         exit;
     }
-
+}
     // ======================
     // === GET /assets/{id} =
     // ======================
