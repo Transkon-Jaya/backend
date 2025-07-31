@@ -190,45 +190,66 @@ try {
     }
 
     // =====================
-// === DELETE /assets/{id} ====
-// =====================
-if ($method === 'DELETE') {
-    // Pastikan path adalah /assets/{id}
-    if (strpos($_SERVER['REQUEST_URI'], '/assets') !== false) {
-        $id = explode('/assets', $_SERVER['REQUEST_URI'])[1];
-        $id = intval($id); // Pastikan ID numeric
+    // === DELETE /{id} ====
+    // =====================
+    if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    
+    // Handle DELETE /api/assets/{id}
+    if (preg_match('~/api/assets/(\d+)~', $path, $matches)) {
+        $id = (int)$matches[1];
         
-        if (!$id) {
-            throw new Exception("ID asset tidak valid", 400);
+        try {
+            $conn->autocommit(false);
+            
+            // Validasi ID
+            if ($id <= 0) {
+                throw new Exception("Invalid asset ID", 400);
+            }
+
+            // Cek keberadaan asset
+            $check = $conn->prepare("SELECT id FROM assets WHERE id = ?");
+            $check->bind_param("i", $id);
+            $check->execute();
+            
+            if ($check->get_result()->num_rows === 0) {
+                throw new Exception("Asset not found", 404);
+            }
+
+            // Hapus asset
+            $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+
+            if ($stmt->affected_rows === 0) {
+                throw new Exception("Failed to delete asset", 500);
+            }
+
+            $conn->commit();
+            
+            http_response_code(200);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Asset deleted successfully',
+                'deleted_id' => $id
+            ]);
+            exit;
+            
+        } catch (Exception $e) {
+            $conn->rollback();
+            http_response_code($e->getCode() ?: 500);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'code' => $e->getCode()
+            ]);
+            exit;
         }
-
-        // Cek apakah asset ada
-        $check = $conn->prepare("SELECT id FROM assets WHERE id = ?");
-        $check->bind_param("i", $id);
-        $check->execute();
-        
-        if ($check->get_result()->num_rows === 0) {
-            throw new Exception("Asset tidak ditemukan", 404);
-        }
-
-        // Lakukan delete
-        $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-
-        if ($stmt->affected_rows === 0) {
-            throw new Exception("Gagal menghapus asset", 500);
-        }
-
-        $conn->commit();
-        echo json_encode([
-            "status" => 200, 
-            "message" => "Asset berhasil dihapus",
-            "deleted_id" => $id
-        ]);
-        exit;
     }
 }
+
     // ======================
     // === GET /assets/{id} =
     // ======================
