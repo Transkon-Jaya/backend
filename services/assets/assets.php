@@ -394,6 +394,38 @@ try {
 
     throw new Exception("Method tidak diizinkan", 405);
 
+// ================================
+// === GET /assets?stock_history=1&id=5 ===
+// ================================
+if ($method === 'GET' && isset($_GET['stock_history']) && $id) {
+    $sql = "SELECT 
+                asm.*, 
+                al_from.name as from_location_name,
+                al_to.name as to_location_name,
+                up.name  as created_by_name
+            FROM asset_stock_movements asm
+            LEFT JOIN asset_locations al_from ON asm.from_location_id = al_from.id
+            LEFT JOIN asset_locations al_to ON asm.to_location_id = al_to.id
+            LEFT JOIN user_profiles up  ON asm.created_by = up.username 
+            WHERE asm.asset_id = ?
+            ORDER BY asm.created_at DESC";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $movements = [];
+    while ($row = $result->fetch_assoc()) {
+        $movements[] = $row;
+    }
+    $conn->commit();
+    echo json_encode([
+        "status" => 200,
+        "data" => $movements
+    ]);
+    exit;
+}    
+
 } catch (Exception $e) {
     $conn->rollback();
     http_response_code($e->getCode() ?: 500);
