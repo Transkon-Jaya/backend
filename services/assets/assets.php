@@ -199,68 +199,10 @@ try {
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
 
-    // ================================================
-// === FUNGSI UNTUK MENYIMPAN PERGERAKAN ASET  ====
-// ================================================
-function logAssetMovement($conn, $assetId, $type, $from = null, $to = null, $notes, $createdBy) {
-    if ($type === 'transfer') {
-        $sql = "INSERT INTO asset_stock_movements 
-                (asset_id, movement_type, quantity, from_location_id, to_location_id, notes, created_by) 
-                VALUES (?, ?, 1, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("isiisss", $assetId, $type, $from, $to, $notes, $createdBy);
-    } else {
-        $sql = "INSERT INTO asset_stock_movements 
-                (asset_id, movement_type, quantity, notes, created_by) 
-                VALUES (?, ?, 1, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("isss", $assetId, $type, $notes, $createdBy);
+        $conn->commit();
+        echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
+        exit;
     }
-
-    if (!$stmt->execute()) {
-        throw new Exception("Gagal mencatat pergerakan aset: " . $stmt->error);
-    }
-}
-
-// ===============================================
-// === FUNGSI UTAMA: CATAT JIKA ADA PERUBAHAN ====
-// ===============================================
-try {
-    $createdBy = $authUser['username'] ?? 'unknown_user';  // Ambil user login
-
-    // 1. Jika lokasi berubah → 'transfer'
-    if (isset($input['location_id']) && $input['location_id'] != $oldData['location_id']) {
-        $fromLoc = (int)$oldData['location_id'];
-        $toLoc = (int)$input['location_id'];
-        $notes = "Transfer dari lokasi ID $fromLoc ke $toLoc";
-
-        logAssetMovement($conn, $id, 'transfer', $fromLoc, $toLoc, $notes, $createdBy);
-    }
-
-    // 2. Jika status berubah → 'adjustment'
-    if (isset($input['status']) && $input['status'] !== $oldData['status']) {
-        $notes = "Status berubah dari '{$oldData['status']}' ke '{$input['status']}'";
-
-        logAssetMovement($conn, $id, 'adjustment', null, null, $notes, $createdBy);
-    }
-
-    // 3. Jika user berubah → 'adjustment'
-    if (isset($input['user']) && $input['user'] !== $oldData['user']) {
-        $notes = "User berubah dari '{$oldData['user']}' ke '{$input['user']}'";
-
-        logAssetMovement($conn, $id, 'adjustment', null, null, $notes, $createdBy);
-    }
-
-    // Commit perubahan jika semua sukses
-    $conn->commit();
-
-    echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
-    exit;
-} catch (Exception $e) {
-    $conn->rollback();
-    echo json_encode(["status" => 500, "message" => "Gagal memperbarui aset: " . $e->getMessage()]);
-    exit;
-}
 
     // =====================
     // === DELETE /{id} ====
@@ -408,38 +350,6 @@ try {
     }
 
     throw new Exception("Method tidak diizinkan", 405);
-
-// ================================
-// === GET /assets?stock_history=1&id=5 ===
-// ================================
-if ($method === 'GET' && isset($_GET['stock_history']) && $id) {
-    $sql = "SELECT 
-                asm.*, 
-                al_from.name as from_location_name,
-                al_to.name as to_location_name,
-                up.name  as created_by_name
-            FROM asset_stock_movements asm
-            LEFT JOIN asset_locations al_from ON asm.from_location_id = al_from.id
-            LEFT JOIN asset_locations al_to ON asm.to_location_id = al_to.id
-            LEFT JOIN user_profiles up  ON asm.created_by = up.username 
-            WHERE asm.asset_id = ?
-            ORDER BY asm.created_at DESC";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $movements = [];
-    while ($row = $result->fetch_assoc()) {
-        $movements[] = $row;
-    }
-    $conn->commit();
-    echo json_encode([
-        "status" => 200,
-        "data" => $movements
-    ]);
-    exit;
-}    
 
 } catch (Exception $e) {
     $conn->rollback();
