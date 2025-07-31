@@ -193,18 +193,27 @@ try {
     // === DELETE /{id} ====
     // =====================
     if ($method === 'DELETE') {
-        if (!$id || !is_numeric($id)) {
-            throw new Exception("ID asset tidak valid", 400);
-        }
+    // Ambil ID dari $_POST, $_GET, atau body JSON
+    $id = $_POST['id'] ?? $_GET['id'] ?? null;
 
-        $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-
-        $conn->commit();
-        echo json_encode(["status" => 200, "message" => "Asset berhasil dihapus"]);
-        exit;
+    if (!$id) {
+        $input = json_decode(file_get_contents("php://input"), true);
+        $id = $input['id'] ?? null;
     }
+
+    if (!$id || !is_numeric($id)) {
+        throw new Exception("ID asset tidak valid", 400);
+    }
+
+    $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+
+    $conn->commit();
+    echo json_encode(["status" => 200, "message" => "Asset berhasil dihapus"]);
+    exit;
+}
+
 
     // ======================
     // === GET /assets/{id} =
