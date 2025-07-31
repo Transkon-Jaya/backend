@@ -202,14 +202,7 @@ try {
     // ==================================================
     // === 📝 CATAT PERUBAHAN DI asset_stock_movements  DI SINI ===
     // ==================================================
-    // Ambil data lama dulu
-$stmtOld = $conn->prepare("SELECT * FROM assets WHERE id = ?");
-$stmtOld->bind_param("i", $id);
-$stmtOld->execute();
-$oldResult = $stmtOld->get_result();
-$oldData = $oldResult->fetch_assoc();
-if (!$oldData) throw new Exception("Asset tidak ditemukan", 404);
-
+    
 $createdBy = $authUser['username'] ?? 'unknown_user'; // <-- ambil username karyawan yang login
 
 // 1. Jika lokasi berubah → catat sebagai 'transfer'
