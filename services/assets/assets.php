@@ -199,55 +199,68 @@ try {
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
 
-    // ==================================================
-    // === 📝 CATAT PERUBAHAN DI asset_stock_movements  DI SINI ===
-    // ==================================================
-    
-$createdBy = $authUser['username'] ?? 'unknown_user'; // <-- ambil username karyawan yang login
-
-// 1. Jika lokasi berubah → catat sebagai 'transfer'
-if (isset($input['location_id']) && $input['location_id'] != $oldData['location_id']) {
-    $movementSql = "INSERT INTO asset_stock_movements 
-        (asset_id, movement_type, quantity, from_location_id, to_location_id, notes, created_by) 
-        VALUES (?, 'transfer', 1, ?, ?, ?, ?)";
-    $fromLoc = $oldData['location_id'];
-    $toLoc = $input['location_id'];
-    $notes = "Transfer dari lokasi ID $fromLoc ke $toLoc";
-
-    $movementStmt = $conn->prepare($movementSql);
-    $movementStmt->bind_param("iiiss", $id, $fromLoc, $toLoc, $notes, $createdBy);
-    $movementStmt->execute();
-}
-
-// 2. Jika status berubah → adjustment
-if (isset($input['status']) && $input['status'] !== $oldData['status']) {
-    $movementSql = "INSERT INTO asset_stock_movements 
-        (asset_id, movement_type, quantity, notes, created_by) 
-        VALUES (?, 'adjustment', 1, ?, ?)";
-    $notes = "Status berubah dari '{$oldData['status']}' ke '{$input['status']}'";
-
-    $movementStmt = $conn->prepare($movementSql);
-    $movementStmt->bind_param("iss", $id, $notes, $createdBy);
-    $movementStmt->execute();
-}
-
-// 3. Jika user berubah → adjustment
-if (isset($input['user']) && $input['user'] !== $oldData['user']) {
-    $movementSql = "INSERT INTO asset_stock_movements 
-        (asset_id, movement_type, quantity, notes, created_by) 
-        VALUES (?, 'adjustment', 1, ?, ?)";
-    $notes = "User berubah dari '{$oldData['user']}' ke '{$input['user']}'";
-
-    $movementStmt = $conn->prepare($movementSql);
-    $movementStmt->bind_param("iss", $id, $notes, $createdBy);
-    $movementStmt->execute();
-}
-
-
-        $conn->commit();
-        echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
-        exit;
+    // ================================================
+// === FUNGSI UNTUK MENYIMPAN PERGERAKAN ASET  ====
+// ================================================
+function logAssetMovement($conn, $assetId, $type, $from = null, $to = null, $notes, $createdBy) {
+    if ($type === 'transfer') {
+        $sql = "INSERT INTO asset_stock_movements 
+                (asset_id, movement_type, quantity, from_location_id, to_location_id, notes, created_by) 
+                VALUES (?, ?, 1, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("isiisss", $assetId, $type, $from, $to, $notes, $createdBy);
+    } else {
+        $sql = "INSERT INTO asset_stock_movements 
+                (asset_id, movement_type, quantity, notes, created_by) 
+                VALUES (?, ?, 1, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("isss", $assetId, $type, $notes, $createdBy);
     }
+
+    if (!$stmt->execute()) {
+        throw new Exception("Gagal mencatat pergerakan aset: " . $stmt->error);
+    }
+}
+
+// ===============================================
+// === FUNGSI UTAMA: CATAT JIKA ADA PERUBAHAN ====
+// ===============================================
+try {
+    $createdBy = $authUser['username'] ?? 'unknown_user';  // Ambil user login
+
+    // 1. Jika lokasi berubah → 'transfer'
+    if (isset($input['location_id']) && $input['location_id'] != $oldData['location_id']) {
+        $fromLoc = (int)$oldData['location_id'];
+        $toLoc = (int)$input['location_id'];
+        $notes = "Transfer dari lokasi ID $fromLoc ke $toLoc";
+
+        logAssetMovement($conn, $id, 'transfer', $fromLoc, $toLoc, $notes, $createdBy);
+    }
+
+    // 2. Jika status berubah → 'adjustment'
+    if (isset($input['status']) && $input['status'] !== $oldData['status']) {
+        $notes = "Status berubah dari '{$oldData['status']}' ke '{$input['status']}'";
+
+        logAssetMovement($conn, $id, 'adjustment', null, null, $notes, $createdBy);
+    }
+
+    // 3. Jika user berubah → 'adjustment'
+    if (isset($input['user']) && $input['user'] !== $oldData['user']) {
+        $notes = "User berubah dari '{$oldData['user']}' ke '{$input['user']}'";
+
+        logAssetMovement($conn, $id, 'adjustment', null, null, $notes, $createdBy);
+    }
+
+    // Commit perubahan jika semua sukses
+    $conn->commit();
+
+    echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
+    exit;
+} catch (Exception $e) {
+    $conn->rollback();
+    echo json_encode(["status" => 500, "message" => "Gagal memperbarui aset: " . $e->getMessage()]);
+    exit;
+}
 
     // =====================
     // === DELETE /{id} ====
