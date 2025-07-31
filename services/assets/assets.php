@@ -194,8 +194,8 @@ try {
 // =====================
 if ($method === 'DELETE') {
     // Pastikan path adalah /assets/{id}
-    if (strpos($_SERVER['REQUEST_URI'], '/assets/') !== false) {
-        $id = explode('/assets/', $_SERVER['REQUEST_URI'])[1];
+    if (strpos($_SERVER['REQUEST_URI'], '/assets') !== false) {
+        $id = explode('/assets', $_SERVER['REQUEST_URI'])[1];
         $id = intval($id); // Pastikan ID numeric
         
         if (!$id) {
