@@ -199,6 +199,49 @@ try {
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
 
+          // ==================================================
+    // === 📝 CATAT PERUBAHAN DI asset_movements DI SINI ===
+    // ==================================================
+    $userId = $user['id'] ?? 1; // dari auth.php, atau default 1
+
+    // 1. Jika lokasi berubah → catat sebagai 'transfer'
+    if (isset($input['location_id']) && $input['location_id'] != $oldData['location_id']) {
+        $movementSql = "INSERT INTO asset_movements 
+            (asset_id, movement_type, quantity, from_location_id, to_location_id, notes, created_by) 
+            VALUES (?, 'transfer', 1, ?, ?, ?, ?)";
+        $fromLoc = $oldData['location_id'];
+        $toLoc = $input['location_id'];
+        $notes = "Transfer dari lokasi ID $fromLoc ke $toLoc";
+
+        $movementStmt = $conn->prepare($movementSql);
+        $movementStmt->bind_param("iiiss", $id, $fromLoc, $toLoc, $notes, $userId);
+        $movementStmt->execute();
+    }
+
+    // 2. Jika status berubah → catat sebagai 'adjustment'
+    if (isset($input['status']) && $input['status'] !== $oldData['status']) {
+        $movementSql = "INSERT INTO asset_movements 
+            (asset_id, movement_type, quantity, notes, created_by) 
+            VALUES (?, 'adjustment', 1, ?, ?)";
+        $notes = "Status berubah dari '{$oldData['status']}' ke '{$input['status']}'";
+
+        $movementStmt = $conn->prepare($movementSql);
+        $movementStmt->bind_param("iss", $id, $notes, $userId);
+        $movementStmt->execute();
+    }
+
+    // 3. Jika user berubah → catat sebagai 'adjustment'
+    if (isset($input['user']) && $input['user'] !== $oldData['user']) {
+        $movementSql = "INSERT INTO asset_movements 
+            (asset_id, movement_type, quantity, notes, created_by) 
+            VALUES (?, 'adjustment', 1, ?, ?)";
+        $notes = "User berubah dari '{$oldData['user']}' ke '{$input['user']}'";
+
+        $movementStmt = $conn->prepare($movementSql);
+        $movementStmt->bind_param("iss", $id, $notes, $userId);
+        $movementStmt->execute();
+    }
+
         $conn->commit();
         echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
         exit;
