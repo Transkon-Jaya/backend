@@ -237,8 +237,7 @@ $types .= 's';
     exit;
 }
 
-try {
-    $conn->autocommit(false);
+
     // ======================
     // === GET /assets/{id} =
     // ======================
@@ -272,6 +271,8 @@ try {
         exit;
     }
 
+    try {
+    $conn->autocommit(false);
 
     // ========================
     // === GET /assets list ===
@@ -383,65 +384,18 @@ try {
         exit;
     }
 
-   // =================================
-    // === GET /assets?get_total_values ===
-    // =================================
-    if ($method === 'GET' && isset($_GET['get_total_values'])) {
-        $sql = "SELECT 
-                    SUM(purchase_value) as total_purchase_value,
-                    SUM(current_value) as total_current_value
-                FROM assets
-                WHERE 1=1";
+    throw new Exception("Method tidak diizinkan", 405);
 
-        $conditions = [];
-        $params = [];
-        $types = '';
-
-        if ($id_company) {
-            $conditions[] = "id_company = ?";
-            $params[] = $id_company;
-            $types .= 'i';
-        }
-        if ($status) {
-            $conditions[] = "status = ?";
-            $params[] = $status;
-            $types .= 's';
-        }
-        if ($category) {
-            $conditions[] = "category_id = ?";
-            $params[] = $category;
-            $types .= 'i';
-        }
-
-        if ($conditions) {
-            $sql .= " AND " . implode(" AND ", $conditions);
-        }
-
-        $stmt = $conn->prepare($sql);
-        if ($params) {
-            $stmt->bind_param($types, ...$params);
-        }
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-
-        $totalPurchase = (float)($row['total_purchase_value'] ?? 0);
-        $totalCurrent = (float)($row['total_current_value'] ?? 0);
-
-        $depreciationValue = $totalPurchase - $totalCurrent;
-        $depreciationPercentage = $totalPurchase > 0 ? round(($depreciationValue / $totalPurchase) * 100, 2) : 0;
-
-        echo json_encode([
-            "status" => 200,
-            "data" => [
-                "total_purchase_value" => $totalPurchase,
-                "total_current_value" => $totalCurrent,
-                "depreciation_value" => $depreciationValue,
-                "depreciation_percentage" => $depreciationPercentage
-            ]
-        ]);
-        exit;
-    }
+} catch (Exception $e) {
+    $conn->rollback();
+    http_response_code($e->getCode() ?: 500);
+    echo json_encode([
+        "status" => $e->getCode() ?: 500,
+        "error" => $e->getMessage()
+    ]);
+} finally {
+    $conn->close();
+}
 
 // =============================
 // === GET /assets/locations ===
@@ -466,15 +420,73 @@ if ($method === 'GET' && isset($_GET['get_locations'])) {
     exit;
 }
 
-
-    throw new Exception("Method tidak diizinkan", 405);
-} catch (Exception $e) {
-    $conn->rollback();
-    http_response_code($e->getCode() ?: 500);
+// =================================
+// === GET /assets/total-values ====
+// =================================
+if ($method === 'GET' && isset($_GET['get_total_values'])) {
+    // Query untuk mendapatkan total current_value dan purchase_value
+    $sql = "SELECT 
+                SUM(current_value) as total_current_value,
+                SUM(purchase_value) as total_purchase_value
+            FROM assets
+            WHERE 1=1";
+    
+    // Tambahkan kondisi filter jika ada
+    $conditions = [];
+    $params = [];
+    $types = '';
+    
+    if ($id_company) {
+        $conditions[] = "id_company = ?";
+        $params[] = $id_company;
+        $types .= 'i';
+    }
+    
+    if ($status) {
+        $conditions[] = "status = ?";
+        $params[] = $status;
+        $types .= 's';
+    }
+    
+    if ($category) {
+        $conditions[] = "category_id = ?";
+        $params[] = $category;
+        $types .= 'i';
+    }
+    
+    if ($conditions) {
+        $sql .= " AND " . implode(" AND ", $conditions);
+    }
+    
+    $stmt = $conn->prepare($sql);
+    if ($params) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    $totalCurrent = $row['total_current_value'] ?? 0;
+    $totalPurchase = $row['total_purchase_value'] ?? 0;
+    
+    // Format nilai untuk ditampilkan
+    function formatCurrency($value) {
+        return 'Rp ' . number_format($value, 0, ',', '.');
+    }
+    
     echo json_encode([
-        "status" => $e->getCode() ?: 500,
-        "error" => $e->getMessage()
+        "status" => 200,
+        "data" => [
+            "total_current_value" => (float)$totalCurrent,
+            "formatted_total_current_value" => formatCurrency($totalCurrent),
+            "total_purchase_value" => (float)$totalPurchase,
+            "formatted_total_purchase_value" => formatCurrency($totalPurchase),
+            "depreciation_value" => (float)($totalPurchase - $totalCurrent),
+            "formatted_depreciation_value" => formatCurrency($totalPurchase - $totalCurrent),
+            "depreciation_percentage" => $totalPurchase > 0 ? 
+                round((($totalPurchase - $totalCurrent) / $totalPurchase) * 100, 2) : 0
+        ]
     ]);
-} finally {
-    $conn->close();
+    exit;
 }
