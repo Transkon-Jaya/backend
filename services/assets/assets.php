@@ -271,9 +271,6 @@ $types .= 's';
         exit;
     }
 
-    try {
-    $conn->autocommit(false);
-
     // ========================
     // === GET /assets list ===
     // ========================
