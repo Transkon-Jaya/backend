@@ -115,7 +115,6 @@ try {
     if (!$stmt) {
         throw new Exception("Prepare gagal: " . $conn->error);
     }
-    $auth = authorize();
 
     $stmt->bind_param(
     "ssisdsiisssss",
@@ -197,6 +196,8 @@ try {
         $sql = "UPDATE assets SET " . implode(', ', $set) . " WHERE id = ?";
         $params[] = $id;
         $types .= 'i';
+
+        $auth = authorize();
 
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
