@@ -383,57 +383,14 @@ try {
         exit;
     }
 
-    throw new Exception("Method tidak diizinkan", 405);
-
-} catch (Exception $e) {
-    $conn->rollback();
-    http_response_code($e->getCode() ?: 500);
-    echo json_encode([
-        "status" => $e->getCode() ?: 500,
-        "error" => $e->getMessage()
-    ]);
-} finally {
-    $conn->close();
-}
-
-// =============================
-// === GET /assets/locations ===
-// =============================
-if ($method === 'GET' && isset($_GET['get_locations'])) {
-    $sql = "SELECT id, name FROM asset_locations WHERE id = ? ORDER BY name";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    
-    $result = $stmt->get_result();
-    $locations = [];
-    while ($row = $result->fetch_assoc()) {
-        $locations[] = $row;
-    }
-    
-    $conn->commit();
-    echo json_encode([
-        "status" => 200,
-        "data" => $locations
-    ]);
-    exit;
-}
-
-// =================================
-// === GET /assets/total-values ====
-// =================================
- if ($method === 'GET' && isset($_GET['get_total_values'])) {
+   // =================================
+    // === GET /assets?get_total_values ===
+    // =================================
+    if ($method === 'GET' && isset($_GET['get_total_values'])) {
         $sql = "SELECT 
-                    SUM(a.purchase_value) as total_purchase_value,
-                    SUM(
-                        IF(
-                            DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-                            0,
-                            a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
-                        )
-                    ) as total_current_value
-                FROM assets a
-                LEFT JOIN asset_categories c ON a.category_id = c.id
+                    SUM(purchase_value) as total_purchase_value,
+                    SUM(current_value) as total_current_value
+                FROM assets
                 WHERE 1=1";
 
         $conditions = [];
@@ -441,17 +398,17 @@ if ($method === 'GET' && isset($_GET['get_locations'])) {
         $types = '';
 
         if ($id_company) {
-            $conditions[] = "a.id_company = ?";
+            $conditions[] = "id_company = ?";
             $params[] = $id_company;
             $types .= 'i';
         }
         if ($status) {
-            $conditions[] = "a.status = ?";
+            $conditions[] = "status = ?";
             $params[] = $status;
             $types .= 's';
         }
         if ($category) {
-            $conditions[] = "a.category_id = ?";
+            $conditions[] = "category_id = ?";
             $params[] = $category;
             $types .= 'i';
         }
@@ -485,6 +442,30 @@ if ($method === 'GET' && isset($_GET['get_locations'])) {
         ]);
         exit;
     }
+
+// =============================
+// === GET /assets/locations ===
+// =============================
+if ($method === 'GET' && isset($_GET['get_locations'])) {
+    $sql = "SELECT id, name FROM asset_locations WHERE id = ? ORDER BY name";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $locations = [];
+    while ($row = $result->fetch_assoc()) {
+        $locations[] = $row;
+    }
+    
+    $conn->commit();
+    echo json_encode([
+        "status" => 200,
+        "data" => $locations
+    ]);
+    exit;
+}
+
 
     throw new Exception("Method tidak diizinkan", 405);
 } catch (Exception $e) {
