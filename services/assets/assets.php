@@ -425,7 +425,8 @@ if ($method === 'GET' && isset($_GET['get_total_values'])) {
     $sql = "SELECT 
                 SUM(current_value) as total_current_value,
                 SUM(purchase_value) as total_purchase_value
-            FROM assets;
+            FROM assets
+            WHERE 1=1";
     
     // Tambahkan kondisi filter jika ada
     $conditions = [];
