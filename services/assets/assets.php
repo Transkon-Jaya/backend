@@ -108,28 +108,32 @@ try {
 
     // Insert ke database
     $sql = "INSERT INTO assets 
-        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception("Prepare gagal: " . $conn->error);
     }
+    $auth = authorize();
 
     $stmt->bind_param(
-        "ssisdsiisss",
-        $name,
-        $code,
-        $categoryId,
-        $status,
-        $purchaseValue,
-        $purchaseDate,
-        $locationId,
-        $departmentId,
-        $specifications,
-        $imagePath,
-        $user
+    "ssisdsiisssss",
+    $name,
+    $code,
+    $categoryId,
+    $status,
+    $purchaseValue,
+    $purchaseDate,
+    $locationId,
+    $departmentId,
+    $specifications,
+    $imagePath,
+    $user,
+    $auth['username'], // created_by
+    $auth['username']  // updated_by (awal sama)
     );
+
 
     $stmt->execute();
     $insertId = $stmt->insert_id;
@@ -162,9 +166,9 @@ try {
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
         $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user'];
-        $set = [];
-        $params = [];
-        $types = '';
+        $set[] = "updated_by = ?";
+        $params[] = $auth['username'];
+        $types .= 's';
 
         foreach ($fields as $field) {
             if (array_key_exists($field, $input)) {
