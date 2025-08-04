@@ -37,6 +37,7 @@ try {
     if ($method === 'POST') {
     $input = [];
     $imagePath = null;
+    $currentUser = getCurrentUser(); 
 
     // Cek apakah ini multipart/form-data (upload file)
     if (strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
@@ -108,8 +109,8 @@ try {
 
     // Insert ke database
     $sql = "INSERT INTO assets 
-    (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, created_by, updated_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -129,7 +130,7 @@ try {
     $specifications,
     $imagePath,
     $user,
-    $auth['username'], // created_by
+    $currentUser, // created_by
     $auth['username']  // updated_by (awal sama)
     );
 
@@ -148,7 +149,8 @@ try {
             "name" => $name,
             "code" => $code,
             "specifications" => $specifications,
-            "image_path" => $imagePath
+            "image_path" => $imagePath,
+            "created_by" => $currentUser
         ]
     ]);
     exit;
@@ -164,30 +166,30 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user'];
-        $set[] = "updated_by = ?";
-        $params[] = $auth['username'];
-        $types .= 's';
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user', 'updated_by'];
+        $set = [];
+        $params = [];
+        $types = '';
 
         foreach ($fields as $field) {
-            if (array_key_exists($field, $input)) {
-                $set[] = "$field = ?";
-
-                 if ($field === 'specifications') {
-            $value = is_array($input[$field]) ? json_encode($input[$field]) : $input[$field];
-            if (strlen($value) > 255) {
-                $value = substr($value, 0, 255); // Potong teks
-                // Atau bisa juga beri error:
-                // throw new Exception("Spesifikasi terlalu panjang. Maksimal 255 karakter", 400);
+        if (array_key_exists($field, $input)) {
+            $set[] = "$field = ?";
+            
+            if ($field === 'specifications') {
+                $value = is_array($input[$field]) ? json_encode($input[$field]) : $input[$field];
+                if (strlen($value) > 255) {
+                    $value = substr($value, 0, 255);
+                }
+                $params[] = $value;
+            } else if ($field === 'updated_by') {
+                $params[] = $currentUser; // Set updated_by dengan user saat ini
+            } else {
+                $params[] = $input[$field];
             }
-            $params[] = $value;
-        } else {
-            $params[] = $input[$field];
+            
+            $types .= is_numeric(end($params)) ? 'd' : 's';
         }
-        
-        $types .= is_numeric(end($params)) ? 'd' : 's';
     }
-}
 
         if (empty($set)) {
             throw new Exception("Tidak ada data untuk diperbarui", 400);
@@ -205,9 +207,13 @@ try {
         $stmt->execute();
 
         $conn->commit();
-        echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
-        exit;
-    }
+    echo json_encode([
+        "status" => 200, 
+        "message" => "Asset berhasil diperbarui",
+        "updated_by" => $currentUser
+    ]);
+    exit;
+}
 
     // =====================
     // === DELETE /{id} ====
