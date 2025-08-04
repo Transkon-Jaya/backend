@@ -422,12 +422,20 @@ if ($method === 'GET' && isset($_GET['get_locations'])) {
 // =================================
 if ($method === 'GET' && isset($_GET['get_total_values'])) {
     // Query untuk mendapatkan total current_value dan purchase_value
-    $sql = "SELECT 
-                SUM(current_value) as total_current_value,
-                SUM(purchase_value) as total_purchase_value
-            FROM assets
-            WHERE 1=1";
-    
+    $sql = "
+    SELECT 
+        SUM(a.purchase_value) AS total_purchase_value,
+        SUM(
+            IF(
+                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                0,
+                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
+            )
+        ) AS total_current_value
+    FROM assets a
+    LEFT JOIN asset_categories c ON a.category_id = c.id
+    WHERE 1=1";
+
     // Tambahkan kondisi filter jika ada
     $conditions = [];
     $params = [];
