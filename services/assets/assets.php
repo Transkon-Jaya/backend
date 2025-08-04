@@ -198,8 +198,6 @@ try {
         $params[] = $id;
         $types .= 'i';
 
-        $auth = authorize();
-
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
         $stmt->bind_param($types, ...$params);
