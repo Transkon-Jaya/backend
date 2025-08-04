@@ -237,8 +237,7 @@ $types .= 's';
     exit;
 }
 
-try {
-    $conn->autocommit(false);
+
     // ======================
     // === GET /assets/{id} =
     // ======================
@@ -272,109 +271,7 @@ try {
         exit;
     }
 
-    // =================================
-// === GET /assets/total-values ====
-// =================================
-if ($method === 'GET' && isset($_GET['get_total_values'])) {
-    // Query untuk mendapatkan total current_value dan purchase_value
-    $sql = "
-    SELECT 
-        SUM(a.purchase_value) AS total_purchase_value,
-        SUM(
-            IF(
-                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-                0,
-                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
-            )
-        ) AS total_current_value
-    FROM assets a
-    LEFT JOIN asset_categories c ON a.category_id = c.id
-    WHERE 1=1";
-
-    // Tambahkan kondisi filter jika ada
-    $conditions = [];
-    $params = [];
-    $types = '';
-    
-    if ($id_company) {
-        $conditions[] = "id_company = ?";
-        $params[] = $id_company;
-        $types .= 'i';
-    }
-    
-    if ($status) {
-        $conditions[] = "status = ?";
-        $params[] = $status;
-        $types .= 's';
-    }
-    
-    if ($category) {
-        $conditions[] = "category_id = ?";
-        $params[] = $category;
-        $types .= 'i';
-    }
-    
-    if ($conditions) {
-        $sql .= " AND " . implode(" AND ", $conditions);
-    }
-    
-    $stmt = $conn->prepare($sql);
-    if ($params) {
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    
-    $totalCurrent = $row['total_current_value'] ?? 0;
-    $totalPurchase = $row['total_purchase_value'] ?? 0;
-    
-    // Format nilai untuk ditampilkan
-    function formatCurrency($value) {
-        return 'Rp ' . number_format($value, 0, ',', '.');
-    }
-    
-    echo json_encode([
-        "status" => 200,
-        "data" => [
-            "total_current_value" => (float)$totalCurrent,
-            "formatted_total_current_value" => formatCurrency($totalCurrent),
-            "total_purchase_value" => (float)$totalPurchase,
-            "formatted_total_purchase_value" => formatCurrency($totalPurchase),
-            "depreciation_value" => (float)($totalPurchase - $totalCurrent),
-            "formatted_depreciation_value" => formatCurrency($totalPurchase - $totalCurrent),
-            "depreciation_percentage" => $totalPurchase > 0 ? 
-                round((($totalPurchase - $totalCurrent) / $totalPurchase) * 100, 2) : 0
-        ]
-    ]);
-    exit;
-}
-
-// =============================
-// === GET /assets/locations ===
-// =============================
-if ($method === 'GET' && isset($_GET['get_locations'])) {
-    $sql = "SELECT id, name FROM asset_locations WHERE id = ? ORDER BY name";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    
-    $result = $stmt->get_result();
-    $locations = [];
-    while ($row = $result->fetch_assoc()) {
-        $locations[] = $row;
-    }
-    
-    $conn->commit();
-    echo json_encode([
-        "status" => 200,
-        "data" => $locations
-    ]);
-    exit;
-}
-
- // ========================
+    // ========================
     // === GET /assets list ===
     // ========================
     if ($method === 'GET') {
@@ -495,4 +392,106 @@ if ($method === 'GET' && isset($_GET['get_locations'])) {
     ]);
 } finally {
     $conn->close();
+}
+
+// =============================
+// === GET /assets/locations ===
+// =============================
+if ($method === 'GET' && isset($_GET['get_locations'])) {
+    $sql = "SELECT id, name FROM asset_locations WHERE id = ? ORDER BY name";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $locations = [];
+    while ($row = $result->fetch_assoc()) {
+        $locations[] = $row;
+    }
+    
+    $conn->commit();
+    echo json_encode([
+        "status" => 200,
+        "data" => $locations
+    ]);
+    exit;
+}
+
+// =================================
+// === GET /assets/total-values ====
+// =================================
+if ($method === 'GET' && isset($_GET['get_total_values'])) {
+    // Query untuk mendapatkan total current_value dan purchase_value
+    $sql = "
+    SELECT 
+        SUM(a.purchase_value) AS total_purchase_value,
+        SUM(
+            IF(
+                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                0,
+                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
+            )
+        ) AS total_current_value
+    FROM assets a
+    LEFT JOIN asset_categories c ON a.category_id = c.id
+    WHERE 1=1";
+
+    // Tambahkan kondisi filter jika ada
+    $conditions = [];
+    $params = [];
+    $types = '';
+    
+    if ($id_company) {
+        $conditions[] = "id_company = ?";
+        $params[] = $id_company;
+        $types .= 'i';
+    }
+    
+    if ($status) {
+        $conditions[] = "status = ?";
+        $params[] = $status;
+        $types .= 's';
+    }
+    
+    if ($category) {
+        $conditions[] = "category_id = ?";
+        $params[] = $category;
+        $types .= 'i';
+    }
+    
+    if ($conditions) {
+        $sql .= " AND " . implode(" AND ", $conditions);
+    }
+    
+    $stmt = $conn->prepare($sql);
+    if ($params) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    $totalCurrent = $row['total_current_value'] ?? 0;
+    $totalPurchase = $row['total_purchase_value'] ?? 0;
+    
+    // Format nilai untuk ditampilkan
+    function formatCurrency($value) {
+        return 'Rp ' . number_format($value, 0, ',', '.');
+    }
+    
+    echo json_encode([
+        "status" => 200,
+        "data" => [
+            "total_current_value" => (float)$totalCurrent,
+            "formatted_total_current_value" => formatCurrency($totalCurrent),
+            "total_purchase_value" => (float)$totalPurchase,
+            "formatted_total_purchase_value" => formatCurrency($totalPurchase),
+            "depreciation_value" => (float)($totalPurchase - $totalCurrent),
+            "formatted_depreciation_value" => formatCurrency($totalPurchase - $totalCurrent),
+            "depreciation_percentage" => $totalPurchase > 0 ? 
+                round((($totalPurchase - $totalCurrent) / $totalPurchase) * 100, 2) : 0
+        ]
+    ]);
+    exit;
 }
