@@ -467,11 +467,6 @@ if ($method === 'GET' && isset($_GET['get_total_values'])) {
     $totalCurrent = $row['total_current_value'] ?? 0;
     $totalPurchase = $row['total_purchase_value'] ?? 0;
     
-    // Format nilai untuk ditampilkan
-    function formatCurrency($value) {
-        return 'Rp ' . number_format($value, 0, ',', '.');
-    }
-    
     echo json_encode([
         "status" => 200,
         "data" => [
