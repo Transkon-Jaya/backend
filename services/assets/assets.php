@@ -32,12 +32,11 @@ try {
     $conn->autocommit(false);
 
     // ========================
-// === POST (Create) ======
-// ========================
-if ($method === 'POST') {
+    // === POST (Create) ======
+    // ========================
+    if ($method === 'POST') {
     $input = [];
     $imagePath = null;
-    $currentUser = getCurrentUser(); // Anda perlu mengimplementasikan fungsi ini
 
     // Cek apakah ini multipart/form-data (upload file)
     if (strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
@@ -89,7 +88,7 @@ if ($method === 'POST') {
     $locationId = $input['location_id'] ?? null;
     $departmentId = $input['department_id'] ?? null;
     $specifications = $input['specifications'] ?? null;
-    $user = $input['user'] ?? $currentUser; // Gunakan current user jika tidak ada input
+    $user = $input['user'];
 
     // Jika specifications adalah array (misal dari form JSON), encode ke string
     if (is_array($specifications)) {
@@ -104,13 +103,13 @@ if ($method === 'POST') {
         }
     }
     if ($specifications && strlen($specifications) > 255) {
-        $specifications = substr($specifications, 0, 255); 
+    $specifications = substr($specifications, 0, 255); 
     }
 
     // Insert ke database
     $sql = "INSERT INTO assets 
-        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -118,7 +117,7 @@ if ($method === 'POST') {
     }
 
     $stmt->bind_param(
-        "ssisdsiissss",
+        "ssisdsiisss",
         $name,
         $code,
         $categoryId,
@@ -129,8 +128,7 @@ if ($method === 'POST') {
         $departmentId,
         $specifications,
         $imagePath,
-        $user,
-        $currentUser // Tambahkan created_by
+        $user
     );
 
     $stmt->execute();
@@ -147,72 +145,64 @@ if ($method === 'POST') {
             "name" => $name,
             "code" => $code,
             "specifications" => $specifications,
-            "image_path" => $imagePath,
-            "created_by" => $currentUser
+            "image_path" => $imagePath
         ]
     ]);
     exit;
 }
-   // ====================
-// === PUT (Update) ===
-// ====================
-if ($method === 'PUT') {
-    if (!$id || !is_numeric($id)) {
-        throw new Exception("ID asset tidak valid", 400);
-    }
-
-    $input = json_decode(file_get_contents("php://input"), true);
-    if (!is_array($input)) throw new Exception("Input tidak valid", 400);
-
-    $currentUser = getCurrentUser(); // Anda perlu mengimplementasikan fungsi ini
-    
-    // Tambahkan updated_by ke fields dan params
-    $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user', 'updated_by'];
-    $set = [];
-    $params = [];
-    $types = '';
-
-    foreach ($fields as $field) {
-        if (array_key_exists($field, $input)) {
-            $set[] = "$field = ?";
-            
-            if ($field === 'specifications') {
-                $value = is_array($input[$field]) ? json_encode($input[$field]) : $input[$field];
-                if (strlen($value) > 255) {
-                    $value = substr($value, 0, 255);
-                }
-                $params[] = $value;
-            } else if ($field === 'updated_by') {
-                $params[] = $currentUser; // Set updated_by dengan user saat ini
-            } else {
-                $params[] = $input[$field];
-            }
-            
-            $types .= is_numeric(end($params)) ? 'd' : 's';
+    // ====================
+    // === PUT (Update) ===
+    // ====================
+    if ($method === 'PUT') {
+        if (!$id || !is_numeric($id)) {
+            throw new Exception("ID asset tidak valid", 400);
         }
+
+        $input = json_decode(file_get_contents("php://input"), true);
+        if (!is_array($input)) throw new Exception("Input tidak valid", 400);
+
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user'];
+        $set = [];
+        $params = [];
+        $types = '';
+
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $input)) {
+                $set[] = "$field = ?";
+
+                 if ($field === 'specifications') {
+            $value = is_array($input[$field]) ? json_encode($input[$field]) : $input[$field];
+            if (strlen($value) > 255) {
+                $value = substr($value, 0, 255); // Potong teks
+                // Atau bisa juga beri error:
+                // throw new Exception("Spesifikasi terlalu panjang. Maksimal 255 karakter", 400);
+            }
+            $params[] = $value;
+        } else {
+            $params[] = $input[$field];
+        }
+        
+        $types .= is_numeric(end($params)) ? 'd' : 's';
     }
-
-    if (empty($set)) {
-        throw new Exception("Tidak ada data untuk diperbarui", 400);
-    }
-
-    $sql = "UPDATE assets SET " . implode(', ', $set) . " WHERE id = ?";
-    $params[] = $id;
-    $types .= 'i';
-
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-
-    $conn->commit();
-    echo json_encode([
-        "status" => 200, 
-        "message" => "Asset berhasil diperbarui",
-        "updated_by" => $currentUser
-    ]);
-    exit;
 }
+
+        if (empty($set)) {
+            throw new Exception("Tidak ada data untuk diperbarui", 400);
+        }
+
+        $sql = "UPDATE assets SET " . implode(', ', $set) . " WHERE id = ?";
+        $params[] = $id;
+        $types .= 'i';
+
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+
+        $conn->commit();
+        echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
+        exit;
+    }
 
     // =====================
     // === DELETE /{id} ====
