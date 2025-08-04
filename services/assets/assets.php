@@ -467,5 +467,23 @@ if ($method === 'GET' && isset($_GET['get_total_values'])) {
     $totalCurrent = $row['total_current_value'] ?? 0;
     $totalPurchase = $row['total_purchase_value'] ?? 0;
     
+    // Format nilai untuk ditampilkan
+    function formatCurrency($value) {
+        return 'Rp ' . number_format($value, 0, ',', '.');
+    }
+    
+    echo json_encode([
+        "status" => 200,
+        "data" => [
+            "total_current_value" => (float)$totalCurrent,
+            "formatted_total_current_value" => formatCurrency($totalCurrent),
+            "total_purchase_value" => (float)$totalPurchase,
+            "formatted_total_purchase_value" => formatCurrency($totalPurchase),
+            "depreciation_value" => (float)($totalPurchase - $totalCurrent),
+            "formatted_depreciation_value" => formatCurrency($totalPurchase - $totalCurrent),
+            "depreciation_percentage" => $totalPurchase > 0 ? 
+                round((($totalPurchase - $totalCurrent) / $totalPurchase) * 100, 2) : 0
+        ]
+    ]);
     exit;
 }
