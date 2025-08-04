@@ -115,7 +115,6 @@ try {
     if (!$stmt) {
         throw new Exception("Prepare gagal: " . $conn->error);
     }
-    $auth = authorize();
 
     $stmt->bind_param(
     "ssisdsiisssss",
