@@ -494,4 +494,6 @@ if ($method === 'GET' && isset($_GET['get_locations'])) {
         "status" => $e->getCode() ?: 500,
         "error" => $e->getMessage()
     ]);
+} finally {
+    $conn->close();
 }
