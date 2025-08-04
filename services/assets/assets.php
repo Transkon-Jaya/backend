@@ -3,6 +3,9 @@ header("Content-Type: application/json");
 require 'db.php';
 require 'auth.php';
 
+// 🔐 Ambil data user dari token JWT
+$currentUser = authorize(); // Ini akan return array user, atau exit jika tidak valid
+$currentUsername = $currentUser['username'] ?? 'system';
 
 $method = $_SERVER['REQUEST_METHOD'];
 // 🌐 Override _method dari POST/JSON agar bisa DELETE
@@ -108,16 +111,16 @@ try {
 
     // Insert ke database
     $sql = "INSERT INTO assets 
-        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception("Prepare gagal: " . $conn->error);
     }
 
-    $stmt->bind_param(
-        "ssisdsiisss",
+        $stmt->bind_param(
+        "ssisdsiissss",
         $name,
         $code,
         $categoryId,
@@ -128,7 +131,8 @@ try {
         $departmentId,
         $specifications,
         $imagePath,
-        $user
+        $user,
+        $currentUsername  // <-- created_by
     );
 
     $stmt->execute();
@@ -185,6 +189,10 @@ try {
         $types .= is_numeric(end($params)) ? 'd' : 's';
     }
 }
+// ✅ Tambahkan updated_by
+$set[] = "updated_by = ?";
+$params[] = $currentUsername;
+$types .= 's';
 
         if (empty($set)) {
             throw new Exception("Tidak ada data untuk diperbarui", 400);
