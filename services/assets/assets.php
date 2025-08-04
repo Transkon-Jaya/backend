@@ -5,7 +5,7 @@ require 'auth.php';
 
 // 🔐 Ambil data user dari token JWT
 $currentUser = authorize(); // Ini akan return array user, atau exit jika tidak valid
-$currentUsername = $currentUser['username'] ?? 'system';
+$currentName = $currentUser['name'] ?? 'system';
 
 $method = $_SERVER['REQUEST_METHOD'];
 // 🌐 Override _method dari POST/JSON agar bisa DELETE
@@ -132,7 +132,7 @@ try {
         $specifications,
         $imagePath,
         $user,
-        $currentUsername  // <-- created_by
+        $currentName  // <-- created_by
     );
 
     $stmt->execute();
@@ -191,7 +191,7 @@ try {
 }
 // ✅ Tambahkan updated_by
 $set[] = "updated_by = ?";
-$params[] = $currentUsername;
+$params[] = $currentName;
 $types .= 's';
 
         if (empty($set)) {
