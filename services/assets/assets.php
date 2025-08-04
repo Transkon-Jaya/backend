@@ -130,8 +130,7 @@ try {
     $specifications,
     $imagePath,
     $user,
-    $currentUser, // created_by
-    $auth['username']  // updated_by (awal sama)
+    $currentUser // created_by
     );
 
 
