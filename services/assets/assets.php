@@ -6,25 +6,22 @@ require 'auth.php';
 // 🔐 Ambil data user dari token JWT
 $currentUser = authorize(); // Ini akan return array user, atau exit jika tidak valid
 $currentName = $currentUser['name'] ?? 'system';
-
 $method = $_SERVER['REQUEST_METHOD'];
+
 // 🌐 Override _method dari POST/JSON agar bisa DELETE
 $originalMethod = $method;
 if ($method === 'POST') {
     $overrideMethod = $_POST['_method'] ?? $_GET['_method'] ?? null;
-
     if (!$overrideMethod) {
         $body = json_decode(file_get_contents("php://input"), true);
         $overrideMethod = $body['_method'] ?? null;
     }
-
     if ($overrideMethod) {
         $method = strtoupper($overrideMethod);
     }
 }
 
 $id = $_GET['id'] ?? ($_POST['id'] ?? null);
-
 $page     = max(1, (int)($_GET['page'] ?? 1));
 $limit    = min(100, max(1, (int)($_GET['limit'] ?? 12)));
 $search   = $_GET['search'] ?? null;
@@ -38,135 +35,133 @@ try {
     // === POST (Create) ======
     // ========================
     if ($method === 'POST') {
-    $input = [];
-    $imagePath = null;
+        $input = [];
+        $imagePath = null;
 
-     // Debugging: Log incoming request
-        error_log("Content-Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'unknown'));
-        error_log("POST data: " . print_r($_POST, true));
-        error_log("FILES data: " . print_r($_FILES, true));
+        // Cek apakah ini multipart/form-data (upload file)
+        if (strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+            $input = $_POST;
 
-    // Cek apakah ini multipart/form-data (upload file)
-    if (strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
-        // Ambil data dari $_POST
-        $input = $_POST;
-
-        // Handle upload gambar
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
-            $uploadDir = 'uploads/assets/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
+            // Handle upload gambar
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
+                $uploadDir = 'uploads/assets/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                $fileName = uniqid('asset_') . '_' . basename($_FILES['image']['name']);
+                $targetPath = $uploadDir . $fileName;
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
+                    $imagePath = $fileName;
+                } else {
+                    throw new Exception("Gagal upload gambar", 500);
+                }
             }
+        } else {
+            $json = json_decode(file_get_contents("php://input"), true);
+            if (!is_array($json)) {
+                throw new Exception("Input tidak valid", 400);
+            }
+            $input = $json;
+            $imagePath = $input['image_path'] ?? null;
+        }
 
-            $fileName = uniqid('asset_') . '_' . basename($_FILES['image']['name']);
-            $targetPath = $uploadDir . $fileName;
-
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $targetPath)) {
-                $imagePath = $fileName; // simpan nama file saja, atau path relatif
-            } else {
-                throw new Exception("Gagal upload gambar", 500);
+        // Validasi field wajib
+        $required = ['name', 'category_id', 'status'];
+        foreach ($required as $field) {
+            if (empty($input[$field])) {
+                throw new Exception("Field $field wajib diisi", 400);
             }
         }
-    } 
-    // Jika JSON (untuk testing)
-    else {
-        $json = json_decode(file_get_contents("php://input"), true);
-        if (!is_array($json)) {
-            throw new Exception("Input tidak valid", 400);
+
+        // Siapkan data
+        $code = $input['code'] ?? null;
+        $name = $input['name'];
+        $categoryId = $input['category_id'];
+        $status = $input['status'];
+        $purchaseValue = $input['purchase_value'] ?? 0;
+        $purchaseDate = $input['purchase_date'] ?? null;
+        $locationId = $input['location_id'] ?? null;
+        $departmentId = $input['department_id'] ?? null;
+        $specifications = $input['specifications'] ?? null;
+        $user = $input['user'] ?? null;
+        $brand = $input['brand'] ?? null;
+        $description = $input['description'] ?? null;
+        $serialNumber = $input['serial_number'] ?? null;
+        $warrantyStatus = $input['warranty_status'] ?? 'unknown'; // default
+        $supplier = $input['supplier'] ?? null;
+
+        // Validasi warranty_status
+        $validWarrantyStatus = ['in_warranty', 'out_of_warranty', 'unknown'];
+        if (!in_array($warrantyStatus, $validWarrantyStatus)) {
+            throw new Exception("warranty_status harus salah satu dari: " . implode(', ', $validWarrantyStatus), 400);
         }
-        $input = $json;
-        $imagePath = $input['image_path'] ?? null;
-    }
 
-    // Validasi field wajib
-    $required = ['name', 'category_id', 'status'];
-    foreach ($required as $field) {
-        if (empty($input[$field])) {
-            throw new Exception("Field $field wajib diisi", 400);
+        // Proses specifications
+        if (is_array($specifications)) {
+            $specifications = json_encode($specifications);
+        } elseif ($specifications && is_string($specifications)) {
+            json_decode($specifications);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Biarkan sebagai string biasa
+            }
         }
-    }
-
-    // Siapkan data
-    $code = $input['code'] ?? null;
-    $name = $input['name'];
-    $brand = $input['brand'] ?? null;
-    $description = $input['description'] ?? null;
-    $warrantyStatus = $input['warranty_status'] ?? 'unknown';
-    $categoryId = $input['category_id'];
-    $status = $input['status'];
-    $purchaseValue = $input['purchase_value'] ?? 0;
-    $purchaseDate = $input['purchase_date'] ?? null;
-    $locationId = $input['location_id'] ?? null;
-    $departmentId = $input['department_id'] ?? null;
-    $specifications = $input['specifications'] ?? null;
-    $user = $input['user'];
-
-    // Jika specifications adalah array (misal dari form JSON), encode ke string
-    if (is_array($specifications)) {
-        $specifications = json_encode($specifications);
-    } 
-    // Jika string, pastikan valid JSON (opsional)
-    elseif ($specifications && is_string($specifications)) {
-        json_decode($specifications);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            // Bisa pilih: tolak atau biarkan sebagai string biasa
-            // Kita biarkan saja, simpan sebagai string
+        if ($specifications && strlen($specifications) > 255) {
+            $specifications = substr($specifications, 0, 255);
         }
-    }
-    if ($specifications && strlen($specifications) > 255) {
-    $specifications = substr($specifications, 0, 255); 
-    }
 
-    // Insert ke database
-    $sql = "INSERT INTO assets 
-    (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, brand, description, warranty_status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Insert ke database
+        $sql = "INSERT INTO assets 
+        (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, 
+         specifications, image_path, user, brand, description, serial_number, warranty_status, supplier, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Prepare gagal: " . $conn->error);
+        }
 
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare gagal: " . $conn->error);
-    }
-
-            $stmt->bind_param(
-            "ssisdsiisssssss",
-            $data['name'],
-            $data['code'],
-            $data['category_id'],
-            $data['status'],
-            $data['purchase_value'],
-            $data['purchase_date'],
-            $data['location_id'],
-            $data['department_id'],
-            $data['specifications'],
-            $data['image_path'],
-            $data['user'],
-            $data['brand'],
-            $data['description'],
-            $data['warranty_status'],
-            $data['created_by']
+        $stmt->bind_param(
+            "ssisdsiisssssssss",
+            $name,
+            $code,
+            $categoryId,
+            $status,
+            $purchaseValue,
+            $purchaseDate,
+            $locationId,
+            $departmentId,
+            $specifications,
+            $imagePath,
+            $user,
+            $brand,
+            $description,
+            $serialNumber,
+            $warrantyStatus,
+            $supplier,
+            $currentName
         );
 
+        $stmt->execute();
+        $insertId = $stmt->insert_id;
+        $conn->commit();
 
-    $stmt->execute();
-    $insertId = $stmt->insert_id;
-
-    $conn->commit();
-
-    echo json_encode([
-        "status" => 201,
-        "message" => "Asset berhasil ditambahkan",
-        "id" => $insertId,
-        "data" => [
+        echo json_encode([
+            "status" => 201,
+            "message" => "Asset berhasil ditambahkan",
             "id" => $insertId,
-            "name" => $name,
-            "code" => $code,
-            "specifications" => $specifications,
-            "image_path" => $imagePath
-        ]
-    ]);
-    exit;
-}
+            "data" => [
+                "id" => $insertId,
+                "name" => $name,
+                "code" => $code,
+                "brand" => $brand,
+                "serial_number" => $serialNumber,
+                "specifications" => $specifications,
+                "image_path" => $imagePath
+            ]
+        ]);
+        exit;
+    }
+
     // ====================
     // === PUT (Update) ===
     // ====================
@@ -178,7 +173,12 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user', 'brand', 'description', 'warranty_status'];
+        $fields = [
+            'code', 'name', 'category_id', 'status', 'purchase_value', 'purchase_date',
+            'location_id', 'department_id', 'specifications', 'user', 'brand',
+            'description', 'serial_number', 'warranty_status', 'supplier'
+        ];
+
         $set = [];
         $params = [];
         $types = '';
@@ -186,26 +186,31 @@ try {
         foreach ($fields as $field) {
             if (array_key_exists($field, $input)) {
                 $set[] = "$field = ?";
+                $value = $input[$field];
 
-                 if ($field === 'specifications') {
-            $value = is_array($input[$field]) ? json_encode($input[$field]) : $input[$field];
-            if (strlen($value) > 255) {
-                $value = substr($value, 0, 255); // Potong teks
-                // Atau bisa juga beri error:
-                // throw new Exception("Spesifikasi terlalu panjang. Maksimal 255 karakter", 400);
+                if ($field === 'specifications') {
+                    if (is_array($value)) {
+                        $value = json_encode($value);
+                    }
+                    if (strlen($value) > 255) {
+                        $value = substr($value, 0, 255);
+                    }
+                } elseif ($field === 'warranty_status') {
+                    $validWarrantyStatus = ['in_warranty', 'out_of_warranty', 'unknown'];
+                    if (!in_array($value, $validWarrantyStatus)) {
+                        throw new Exception("warranty_status harus salah satu dari: " . implode(', ', $validWarrantyStatus), 400);
+                    }
+                }
+
+                $params[] = $value;
+                $types .= is_numeric($value) ? 'd' : 's';
             }
-            $params[] = $value;
-        } else {
-            $params[] = $input[$field];
         }
-        
-        $types .= is_numeric(end($params)) ? 'd' : 's';
-    }
-}
-// ✅ Tambahkan updated_by
-$set[] = "updated_by = ?";
-$params[] = $currentName;
-$types .= 's';
+
+        // Tambahkan updated_by
+        $set[] = "updated_by = ?";
+        $params[] = $currentName;
+        $types .= 's';
 
         if (empty($set)) {
             throw new Exception("Tidak ada data untuk diperbarui", 400);
@@ -217,10 +222,11 @@ $types .= 's';
 
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Prepare gagal: " . $conn->error);
+
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
-
         $conn->commit();
+
         echo json_encode(["status" => 200, "message" => "Asset berhasil diperbarui"]);
         exit;
     }
@@ -229,27 +235,23 @@ $types .= 's';
     // === DELETE /{id} ====
     // =====================
     if ($method === 'DELETE') {
-    // Ambil ID dari $_POST, $_GET, atau body JSON
-    $id = $_POST['id'] ?? $_GET['id'] ?? null;
+        $id = $_POST['id'] ?? $_GET['id'] ?? null;
+        if (!$id) {
+            $input = json_decode(file_get_contents("php://input"), true);
+            $id = $input['id'] ?? null;
+        }
+        if (!$id || !is_numeric($id)) {
+            throw new Exception("ID asset tidak valid", 400);
+        }
 
-    if (!$id) {
-        $input = json_decode(file_get_contents("php://input"), true);
-        $id = $input['id'] ?? null;
+        $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $conn->commit();
+
+        echo json_encode(["status" => 200, "message" => "Asset berhasil dihapus"]);
+        exit;
     }
-
-    if (!$id || !is_numeric($id)) {
-        throw new Exception("ID asset tidak valid", 400);
-    }
-
-    $stmt = $conn->prepare("DELETE FROM assets WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-
-    $conn->commit();
-    echo json_encode(["status" => 200, "message" => "Asset berhasil dihapus"]);
-    exit;
-}
-
 
     // ======================
     // === GET /assets/{id} =
@@ -274,6 +276,7 @@ $types .= 's';
 
         if (!$asset) throw new Exception("Asset tidak ditemukan", 404);
 
+        // Decode specifications jika JSON
         if (!empty($asset['specifications'])) {
             $specs = json_decode($asset['specifications'], true);
             $asset['specifications'] = (json_last_error() === JSON_ERROR_NONE) ? $specs : $asset['specifications'];
@@ -288,41 +291,126 @@ $types .= 's';
     // === GET /assets list ===
     // ========================
     if ($method === 'GET') {
-        $sql = "
-                SELECT SQL_CALC_FOUND_ROWS 
-        a.*, 
-        c.name AS category_name,
-        l.name AS location_name,
-        d.name AS department_name,
+        // Jika ada parameter khusus, cek dulu
+        if (isset($_GET['get_locations'])) {
+            $sql = "SELECT id, name FROM asset_locations ORDER BY name";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $locations = [];
+            while ($row = $result->fetch_assoc()) {
+                $locations[] = $row;
+            }
+            $conn->commit();
+            echo json_encode([
+                "status" => 200,
+                "data" => $locations
+            ]);
+            exit;
+        }
 
-        -- Nilai terhitung (angka murni, desimal 2 digit)
-        ROUND(
-            IF(
-                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-                0,
-                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
-            ),
-            2
-        ) AS calculated_current_value,
-
-        -- Nilai terformat: Rp 8.000.123
-        CONCAT(
-            'Rp ',
-            REPLACE(FORMAT(
-                FLOOR(
+        if (isset($_GET['get_total_values'])) {
+            $sql = "
+            SELECT 
+                SUM(a.purchase_value) AS total_purchase_value,
+                SUM(
                     IF(
                         DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
                         0,
                         a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
                     )
-                ), 0), ',', '.')
-        ) AS formatted_current_value
+                ) AS total_current_value
+            FROM assets a
+            LEFT JOIN asset_categories c ON a.category_id = c.id
+            WHERE 1=1";
 
-        FROM assets a
-        LEFT JOIN asset_categories c ON a.category_id = c.id
-        LEFT JOIN asset_locations l ON a.location_id = l.id
-        LEFT JOIN asset_departments d ON a.department_id = d.id
-        WHERE 1=1
+            $conditions = [];
+            $params = [];
+            $types = '';
+
+            if ($id_company) {
+                $conditions[] = "a.id_company = ?";
+                $params[] = $id_company;
+                $types .= 'i';
+            }
+            if ($status) {
+                $conditions[] = "a.status = ?";
+                $params[] = $status;
+                $types .= 's';
+            }
+            if ($category) {
+                $conditions[] = "a.category_id = ?";
+                $params[] = $category;
+                $types .= 'i';
+            }
+            if ($conditions) {
+                $sql .= " AND " . implode(" AND ", $conditions);
+            }
+
+            $stmt = $conn->prepare($sql);
+            if ($params) {
+                $stmt->bind_param($types, ...$params);
+            }
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+
+            $totalCurrent = (float)($row['total_current_value'] ?? 0);
+            $totalPurchase = (float)($row['total_purchase_value'] ?? 0);
+
+            function formatCurrency($value) {
+                return 'Rp ' . number_format($value, 0, ',', '.');
+            }
+
+            echo json_encode([
+                "status" => 200,
+                "data" => [
+                    "total_current_value" => $totalCurrent,
+                    "formatted_total_current_value" => formatCurrency($totalCurrent),
+                    "total_purchase_value" => $totalPurchase,
+                    "formatted_total_purchase_value" => formatCurrency($totalPurchase),
+                    "depreciation_value" => $totalPurchase - $totalCurrent,
+                    "formatted_depreciation_value" => formatCurrency($totalPurchase - $totalCurrent),
+                    "depreciation_percentage" => $totalPurchase > 0 ? 
+                        round((($totalPurchase - $totalCurrent) / $totalPurchase) * 100, 2) : 0
+                ]
+            ]);
+            exit;
+        }
+
+        // Default: List assets
+        $sql = "
+            SELECT SQL_CALC_FOUND_ROWS 
+                a.*, 
+                c.name AS category_name,
+                l.name AS location_name,
+                d.name AS department_name,
+                -- Nilai terhitung
+                ROUND(
+                    IF(
+                        DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                        0,
+                        a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
+                    ),
+                    2
+                ) AS calculated_current_value,
+                -- Nilai format Rupiah
+                CONCAT(
+                    'Rp ',
+                    REPLACE(FORMAT(
+                        FLOOR(
+                            IF(
+                                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                                0,
+                                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
+                            )
+                        ), 0), ',', '.')
+                ) AS formatted_current_value
+            FROM assets a
+            LEFT JOIN asset_categories c ON a.category_id = c.id
+            LEFT JOIN asset_locations l ON a.location_id = l.id
+            LEFT JOIN asset_departments d ON a.department_id = d.id
+            WHERE 1=1
         ";
 
         $conditions = [];
@@ -334,20 +422,17 @@ $types .= 's';
             $params[] = $id_company;
             $types .= 'i';
         }
-
         if ($search) {
-            $conditions[] = "(a.name LIKE ? OR a.description LIKE ? OR a.serial_number LIKE ?)";
             $term = "%$search%";
+            $conditions[] = "(a.name LIKE ? OR a.description LIKE ? OR a.serial_number LIKE ?)";
             array_push($params, $term, $term, $term);
             $types .= 'sss';
         }
-
         if ($category) {
             $conditions[] = "a.category_id = ?";
             $params[] = $category;
             $types .= 'i';
         }
-
         if ($status) {
             $conditions[] = "a.status = ?";
             $params[] = $status;
@@ -365,15 +450,17 @@ $types .= 's';
 
         $stmt = $conn->prepare($sql);
         if (!$stmt) throw new Exception("Query gagal: " . $conn->error);
+
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
-
         $result = $stmt->get_result();
         $items = [];
+
         while ($row = $result->fetch_assoc()) {
-            // if (!empty($row['specifications'])) {
-            //     $row['specifications'] = json_decode($row['specifications'], true);
-            // }
+            if (!empty($row['specifications'])) {
+                $specs = json_decode($row['specifications'], true);
+                $row['specifications'] = (json_last_error() === JSON_ERROR_NONE) ? $specs : $row['specifications'];
+            }
             $items[] = $row;
         }
 
@@ -381,6 +468,7 @@ $types .= 's';
         $total = $totalResult->fetch_assoc()['total'];
 
         $conn->commit();
+
         echo json_encode([
             "status" => 200,
             "data" => [
