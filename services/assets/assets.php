@@ -84,6 +84,9 @@ try {
     // Siapkan data
     $code = $input['code'] ?? null;
     $name = $input['name'];
+    $brand = $input['brand'] ?? null;
+    $description = $input['description'] ?? null;
+    $warrantyStatus = $input['warranty_status'] ?? 'unknown';
     $categoryId = $input['category_id'];
     $status = $input['status'];
     $purchaseValue = $input['purchase_value'] ?? 0;
@@ -111,16 +114,17 @@ try {
 
     // Insert ke database
     $sql = "INSERT INTO assets 
-    (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    (name, code, category_id, status, purchase_value, purchase_date, location_id, department_id, specifications, image_path, user, brand, description, warranty_status, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception("Prepare gagal: " . $conn->error);
     }
 
-        $stmt->bind_param(
-        "ssisdsiissss",
+            $stmt->bind_param(
+        "ssisdsiissssssss",
         $name,
         $code,
         $categoryId,
@@ -132,8 +136,12 @@ try {
         $specifications,
         $imagePath,
         $user,
-        $currentName  // <-- created_by
+        $brand,
+        $description,
+        $warrantyStatus,
+        $currentName
     );
+
 
     $stmt->execute();
     $insertId = $stmt->insert_id;
@@ -165,7 +173,7 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user'];
+        $fields = ['code','name', 'category_id', 'status', 'purchase_value', 'purchase_date', 'location_id', 'department_id', 'specifications', 'user', 'brand', 'description', 'warranty_status'];
         $set = [];
         $params = [];
         $types = '';
@@ -274,43 +282,44 @@ $types .= 's';
     // ========================
     // === GET /assets list ===
     // ========================
-    if ($method === 'GET') {
-        $sql = "
-                SELECT SQL_CALC_FOUND_ROWS 
-        a.*, 
-        c.name AS category_name,
-        l.name AS location_name,
-        d.name AS department_name,
+   if ($method === 'GET') {
+    $sql = "
+            SELECT SQL_CALC_FOUND_ROWS 
+    a.*, 
+    c.name AS category_name,
+    l.name AS location_name,
+    d.name AS department_name,
+    TIMESTAMPDIFF(YEAR, a.purchase_date, CURDATE()) AS asset_age,
 
-        -- Nilai terhitung (angka murni, desimal 2 digit)
-        ROUND(
-            IF(
-                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-                0,
-                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
-            ),
-            2
-        ) AS calculated_current_value,
+    -- Nilai terhitung (angka murni, desimal 2 digit)
+    ROUND(
+        IF(
+            DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+            0,
+            a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365))
+        ),
+        2
+    ) AS calculated_current_value,
 
-        -- Nilai terformat: Rp 8.000.123
-        CONCAT(
-            'Rp ',
-            REPLACE(FORMAT(
-                FLOOR(
-                    IF(
-                        DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-                        0,
-                        a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
-                    )
-                ), 0), ',', '.')
-        ) AS formatted_current_value
+    -- Nilai terformat: Rp 8.000.123
+    CONCAT(
+        'Rp ',
+        REPLACE(FORMAT(
+            FLOOR(
+                IF(
+                    DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                    0,
+                    a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365))
+                )
+            ), 0), ',', '.')
+    ) AS formatted_current_value
 
-        FROM assets a
-        LEFT JOIN asset_categories c ON a.category_id = c.id
-        LEFT JOIN asset_locations l ON a.location_id = l.id
-        LEFT JOIN asset_departments d ON a.department_id = d.id
-        WHERE 1=1
-        ";
+    FROM assets a
+    LEFT JOIN asset_categories c ON a.category_id = c.id
+    LEFT JOIN asset_locations l ON a.location_id = l.id
+    LEFT JOIN asset_departments d ON a.department_id = d.id
+    WHERE 1=1
+    ";
 
         $conditions = [];
         $params = [];
