@@ -124,7 +124,7 @@ try {
     }
 
             $stmt->bind_param(
-        "ssisdsiissssssss",
+        "ssisdsiissssss",
         $name,
         $code,
         $categoryId,
