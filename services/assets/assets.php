@@ -282,44 +282,43 @@ $types .= 's';
     // ========================
     // === GET /assets list ===
     // ========================
-   if ($method === 'GET') {
-    $sql = "
-            SELECT SQL_CALC_FOUND_ROWS 
-    a.*, 
-    c.name AS category_name,
-    l.name AS location_name,
-    d.name AS department_name,
-    TIMESTAMPDIFF(YEAR, a.purchase_date, CURDATE()) AS asset_age,
+    if ($method === 'GET') {
+        $sql = "
+                SELECT SQL_CALC_FOUND_ROWS 
+        a.*, 
+        c.name AS category_name,
+        l.name AS location_name,
+        d.name AS department_name,
 
-    -- Nilai terhitung (angka murni, desimal 2 digit)
-    ROUND(
-        IF(
-            DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-            0,
-            a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365))
-        ),
-        2
-    ) AS calculated_current_value,
+        -- Nilai terhitung (angka murni, desimal 2 digit)
+        ROUND(
+            IF(
+                DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                0,
+                a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
+            ),
+            2
+        ) AS calculated_current_value,
 
-    -- Nilai terformat: Rp 8.000.123
-    CONCAT(
-        'Rp ',
-        REPLACE(FORMAT(
-            FLOOR(
-                IF(
-                    DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
-                    0,
-                    a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365))
-                )
-            ), 0), ',', '.')
-    ) AS formatted_current_value
+        -- Nilai terformat: Rp 8.000.123
+        CONCAT(
+            'Rp ',
+            REPLACE(FORMAT(
+                FLOOR(
+                    IF(
+                        DATEDIFF(CURDATE(), a.purchase_date) >= (c.depreciation_rate * 365),
+                        0,
+                        a.purchase_value * (1 - (DATEDIFF(CURDATE(), a.purchase_date) / (c.depreciation_rate * 365)))
+                    )
+                ), 0), ',', '.')
+        ) AS formatted_current_value
 
-    FROM assets a
-    LEFT JOIN asset_categories c ON a.category_id = c.id
-    LEFT JOIN asset_locations l ON a.location_id = l.id
-    LEFT JOIN asset_departments d ON a.department_id = d.id
-    WHERE 1=1
-    ";
+        FROM assets a
+        LEFT JOIN asset_categories c ON a.category_id = c.id
+        LEFT JOIN asset_locations l ON a.location_id = l.id
+        LEFT JOIN asset_departments d ON a.department_id = d.id
+        WHERE 1=1
+        ";
 
         $conditions = [];
         $params = [];
