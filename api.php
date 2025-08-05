@@ -37,6 +37,7 @@ $allowed_routes = [
     'total-masuk'    => 'services/hr/total-masuk.php',
     'holiday'        => 'services/hr/holiday.php',
     'assets'         => 'services/assets/assets.php',
+    'asset_age'      => 'services/assets/asset_age.php',
     'asset-categories' => 'services/assets/categories.php',
     'asset-locations' => 'services/assets/locations.php',
     'asset-stocks'    => 'services/assets/stocks.php',
