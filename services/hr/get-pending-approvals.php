@@ -1,19 +1,18 @@
 <?php
 header("Content-Type: application/json");
-require '../../../db.php';
-require '../../../auth.php'; // Pastikan file auth.php ada untuk fungsi authorize()
+include '../../../db.php';
 
-// 🔐 Ambil user dari JWT
-$currentUser = authorize(); // <- fungsi ini menguraikan token dan ambil user
+$role = $_GET['role'] ?? '';
+$username = $_GET['username'] ?? '';
 
-$level = $currentUser['user_level'] ?? null;
-$username = $currentUser['username'] ?? null;
-
-if (empty($level) || empty($username)) {
-    http_response_code(401);
-    echo json_encode(["error" => "Unauthorized: Missing level or username"]);
+if (empty($role) || empty($username)) {
+    http_response_code(400);
+    echo json_encode(["error" => "Missing role or username", "received" => $_GET]);
     exit;
 }
+
+$role = $conn->real_escape_string($role);
+$username = $conn->real_escape_string($username);
 
 $sql = "
 SELECT 
@@ -24,13 +23,13 @@ LEFT JOIN user_profiles up ON p.username = up.username
 INNER JOIN approvals a ON p.id = a.request_id
 WHERE a.step_order = p.current_step
   AND a.status = 'pending'
-  AND a.level = ?
+  AND a.role = ?
   AND p.approval_status = 'pending'
 ORDER BY p.createdAt DESC
 ";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $level);
+$stmt->bind_param("s", $role);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -55,3 +54,4 @@ while ($row = $result->fetch_assoc()) {
 }
 
 echo json_encode($requests);
+?>
