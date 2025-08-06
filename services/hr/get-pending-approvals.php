@@ -1,6 +1,6 @@
 <?php
 header("Content-Type: application/json");
-include '.db.php';
+include '../../db.php'; // ✅ Perbaiki path
 
 $role = $_GET['role'] ?? '';
 $username = $_GET['username'] ?? '';
@@ -47,7 +47,7 @@ while ($row = $result->fetch_assoc()) {
             'name' => $row['name'],
             'email' => $row['email'],
             'department' => $row['department'],
-            'avatar' => $row['avatar'] ? "/uploads/profile/{$row['avatar']}" : "/default.jpeg"
+            'avatar' => $row['avatar'] ? "/uploads/profiles/{$row['avatar']}" : "/default.jpeg"
         ],
         'details' => $row['keterangan'],
         'attachments' => $row['foto'] ? [['name' => basename($row['foto']), 'size' => 'Unknown']] : []
