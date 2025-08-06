@@ -2,16 +2,16 @@
 header("Content-Type: application/json");
 include '../../../db.php';
 
-$role = $_GET['role'] ?? '';
+$level = $_GET['level'] ?? '';
 $username = $_GET['username'] ?? '';
 
-if (empty($role) || empty($username)) {
+if (empty($level) || empty($username)) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing role or username", "received" => $_GET]);
+    echo json_encode(["error" => "Missing level or username", "received" => $_GET]);
     exit;
 }
 
-$role = $conn->real_escape_string($role);
+$level = $conn->real_escape_string($level);
 $username = $conn->real_escape_string($username);
 
 $sql = "
@@ -23,13 +23,13 @@ LEFT JOIN user_profiles up ON p.username = up.username
 INNER JOIN approvals a ON p.id = a.request_id
 WHERE a.step_order = p.current_step
   AND a.status = 'pending'
-  AND a.role = ?
+  AND a.level = ?
   AND p.approval_status = 'pending'
 ORDER BY p.createdAt DESC
 ";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $role);
+$stmt->bind_param("s", $level);
 $stmt->execute();
 $result = $stmt->get_result();
 
