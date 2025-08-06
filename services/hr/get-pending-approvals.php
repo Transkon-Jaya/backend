@@ -1,6 +1,6 @@
 <?php
 header("Content-Type: application/json");
-include '../../../db.php';
+include '.db.php';
 
 $role = $_GET['role'] ?? '';
 $username = $_GET['username'] ?? '';
@@ -21,10 +21,11 @@ SELECT
 FROM hr_perizinan p
 LEFT JOIN user_profiles up ON p.username = up.username
 INNER JOIN approvals a ON p.id = a.request_id
-WHERE a.step_order = p.current_step
-  AND a.status = 'pending'
-  AND a.role = ?
-  AND p.approval_status = 'pending'
+WHERE 
+    a.step_order = p.current_step
+    AND a.status = 'pending'
+    AND a.role = ?
+    AND p.approval_status = 'pending'
 ORDER BY p.createdAt DESC
 ";
 
