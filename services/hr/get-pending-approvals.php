@@ -1,18 +1,19 @@
 <?php
 header("Content-Type: application/json");
-include '../../../db.php';
+require '../../../db.php';
+require '../../../auth.php'; // Pastikan file auth.php ada untuk fungsi authorize()
 
-$level = $_GET['level'] ?? '';
-$username = $_GET['username'] ?? '';
+// 🔐 Ambil user dari JWT
+$currentUser = authorize(); // <- fungsi ini menguraikan token dan ambil user
+
+$level = $currentUser['user_level'] ?? null;
+$username = $currentUser['username'] ?? null;
 
 if (empty($level) || empty($username)) {
-    http_response_code(400);
-    echo json_encode(["error" => "Missing level or username", "received" => $_GET]);
+    http_response_code(401);
+    echo json_encode(["error" => "Unauthorized: Missing level or username"]);
     exit;
 }
-
-$level = $conn->real_escape_string($level);
-$username = $conn->real_escape_string($username);
 
 $sql = "
 SELECT 
@@ -54,4 +55,3 @@ while ($row = $result->fetch_assoc()) {
 }
 
 echo json_encode($requests);
-?>
