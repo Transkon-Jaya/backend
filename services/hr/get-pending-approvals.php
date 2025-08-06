@@ -1,6 +1,6 @@
 <?php
 header("Content-Type: application/json");
-include 'db.php';
+include '../../../db.php';
 
 $role = $_GET['role'] ?? '';
 $username = $_GET['username'] ?? '';
@@ -40,6 +40,8 @@ while ($row = $result->fetch_assoc()) {
         'type' => $row['jenis'],
         'status' => $row['approval_status'],
         'createdAt' => $row['createdAt'],
+        'current_step' => $row['current_step'],
+        'total_steps' => $row['total_steps'],
         'requester' => [
             'name' => $row['name'],
             'email' => $row['email'],
