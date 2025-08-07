@@ -54,68 +54,91 @@ switch ($method) {
     // POST: Submit Perizinan
     // ========================
     case 'POST':
-        // Cek jika approval
-        if (isset($_POST['action'])) {
-            switch ($_POST['action']) {
-                case 'approve':
-                case 'reject':
-                    include 'approval_action.php';
-                    break;
-                default:
-                    http_response_code(400);
-                    echo json_encode(["status" => 400, "error" => "Invalid action"]);
-            }
-            break;
-        }
+    // Enable error logging
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    file_put_contents('perizinan_debug.log', "\n".date('Y-m-d H:i:s')." - New request\n", FILE_APPEND);
+    file_put_contents('perizinan_debug.log', "POST: ".print_r($_POST, true)."\n", FILE_APPEND);
+    file_put_contents('perizinan_debug.log', "FILES: ".print_r($_FILES, true)."\n", FILE_APPEND);
 
-        // Validasi input utama
-        if (!isset($_POST['username'], $_POST['keterangan'], $_POST['izin'])) {
+    // Validasi input
+    $requiredFields = ['username', 'keterangan', 'izin'];
+    foreach ($requiredFields as $field) {
+        if (!isset($_POST[$field]) || empty($_POST[$field])) {
+            $error = "Field $field diperlukan";
+            file_put_contents('perizinan_debug.log', date('Y-m-d H:i:s')." - $error\n", FILE_APPEND);
             http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Invalid input."]);
-            break;
+            echo json_encode(["status" => 400, "error" => $error]);
+            exit;
+        }
+    }
+
+    $username = $conn->real_escape_string($_POST['username']);
+    $keterangan = $conn->real_escape_string($_POST['keterangan']);
+    $jenis = $conn->real_escape_string($_POST['izin']);
+    $fileName = null;
+
+    // Handle file upload
+    if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['picture'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Hanya file JPG, PNG, GIF yang diperbolehkan"]);
+            exit;
         }
 
-        $username = $conn->real_escape_string($_POST['username']);
-        $keterangan = $conn->real_escape_string($_POST['keterangan']);
-        $jenis = $conn->real_escape_string($_POST['izin']);
-        $isMoved = false;
-        $fileName = "";
+        // Generate unique filename
+        $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
+        $fileName = preg_replace("/[^a-zA-Z0-9_-]/", "", $username) . "_" . time() . "." . $ext;
+        $uploadPath = $uploadDir . $fileName;
 
-        // Upload dan resize gambar
-        if (isset($_FILES['picture'])) {
-            $file = $_FILES['picture'];
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-
-            if (!in_array($file['type'], $allowedTypes)) {
-                http_response_code(400);
-                echo json_encode(["status" => 400, "error" => "Invalid file type."]);
-                break;
-            }
-
-            $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
-            $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
-            $fileName = $cleanUsername . "_" . time() . "." . $ext;
-            $uploadPath = $uploadDir . $fileName;
-
-            try {
-                if (!compressAndResizeImage($file['tmp_name'], $uploadPath, 500, 500)) {
-                    http_response_code(500);
-                    echo json_encode(["status" => 500, "error" => "File resize failed."]);
-                    break;
-                }
-                $isMoved = true;
-            } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "Resize exception: " . $e->getMessage()]);
-                break;
-            }
-        }
-
-        if (!$isMoved) {
+        // Process image
+        if (!compressAndResizeImage($file['tmp_name'], $uploadPath, 500, 500)) {
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => "Photo Move Error"]);
-            break;
+            echo json_encode(["status" => 500, "error" => "Gagal memproses gambar"]);
+            exit;
         }
+    }
+
+    // Mulai transaksi database
+    $conn->begin_transaction();
+
+    try {
+        // 1. Simpan data perizinan
+        $sql = "INSERT INTO hr_perizinan (username, keterangan, jenis, foto, status) 
+                VALUES (?, ?, ?, ?, 'pending')";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssss", $username, $keterangan, $jenis, $fileName);
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Gagal menyimpan data perizinan: " . $stmt->error);
+        }
+
+        $conn->commit();
+        
+        echo json_encode([
+            "status" => 200, 
+            "message" => "Berhasil diajukan",
+            "data" => [
+                "id" => $stmt->insert_id,
+                "jenis" => $jenis
+            ]
+        ]);
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        // Hapus file jika ada error
+        if ($fileName && file_exists($uploadPath)) {
+            unlink($uploadPath);
+        }
+        
+        file_put_contents('perizinan_debug.log', date('Y-m-d H:i:s')." - DB Error: ".$e->getMessage()."\n", FILE_APPEND);
+        http_response_code(500);
+        echo json_encode(["status" => 500, "error" => $e->getMessage()]);
+    }
+    break;
 
         // Ambil department dari user_profiles
         $dept = "Unknown";
