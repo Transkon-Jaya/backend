@@ -3,11 +3,11 @@ header("Content-Type: application/json");
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Jangan tampilkan error ke user
 
-// Mulai output buffer
-ob_start();
+ob_start(); // Start output buffer
 
-include '../../db.php';     // Dari /services/hr/get-pending-approvals.php → /db.php
-include '../../auth.php';   // Untuk verifyToken()
+// --- Tambahkan ini: include yang benar ---
+include '../../db.php';
+include '../../auth.php'; // Untuk verifyToken()
 
 // Hanya boleh GET
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -31,7 +31,7 @@ $username = $_GET['username'] ?? '';
 
 if (empty($role) || empty($username)) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing role or username"]);
+    echo json_encode(["error" => "Missing role or username", "received" => $_GET]);
     ob_end_flush();
     exit;
 }
@@ -42,6 +42,7 @@ error_log("get-pending-approvals: role='$role', username='$username'");
 $role = $conn->real_escape_string($role);
 $username = $conn->real_escape_string($username);
 
+// --- Query utama ---
 $sql = "
 SELECT 
     p.id, p.jenis, p.keterangan, p.foto, p.createdAt, p.approval_status, p.current_step, p.total_steps,
@@ -96,7 +97,6 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
-// Bersihkan buffer sebelum output
 ob_clean();
 echo json_encode($requests);
 ob_end_flush();
