@@ -3,10 +3,10 @@ header("Content-Type: application/json");
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Jangan tampilkan error ke user
 
-// Mulai output buffer untuk pastikan tidak ada output sebelum JSON
+// Mulai output buffer
 ob_start();
 
-include '../../db.php';     // Dari /services/hr/get-pending-approvals.php → ke root
+include '../../db.php';     // Dari /services/hr/get-pending-approvals.php → /db.php
 include '../../auth.php';   // Untuk verifyToken()
 
 // Hanya boleh GET
@@ -36,11 +36,11 @@ if (empty($role) || empty($username)) {
     exit;
 }
 
+// Log untuk debugging
+error_log("get-pending-approvals: role='$role', username='$username'");
+
 $role = $conn->real_escape_string($role);
 $username = $conn->real_escape_string($username);
-
-// Log untuk debugging (cek di error.log)
-error_log("get-pending-approvals: role=$role, username=$username");
 
 $sql = "
 SELECT 
