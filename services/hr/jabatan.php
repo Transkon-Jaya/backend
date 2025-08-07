@@ -1,16 +1,14 @@
 <?php
 header("Content-Type: application/json");
-include '../../db.php';  // Sesuaikan path ke db.php
-include '../../auth.php'; // Pastikan ada fungsi verifyToken()
+include '../db.php';     // ✅ Diperbaiki: dari /api ke root
+include '../auth.php';   // ✅ Diperbaiki
 
-// Hanya boleh method GET
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(["error" => "Method not allowed"]);
     exit;
 }
 
-// Verifikasi token untuk dapatkan username
 $user = verifyToken();
 if (!$user) {
     http_response_code(401);
@@ -20,17 +18,15 @@ if (!$user) {
 
 $username = $user['username'];
 
-// Jika ingin override username (opsional, untuk debug), bisa pakai:
+// Override username via GET (opsional, untuk testing)
 // $username = $_GET['username'] ?? $username;
 
-// Ambil jabatan dari user_profiles
 $sql = "SELECT jabatan FROM user_profiles WHERE username = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $username);
-
 if (!$stmt->execute()) {
     http_response_code(500);
-    echo json_encode(["error" => "Database error"]);
+    echo json_encode(["error" => "Database error: " . $conn->error]);
     exit;
 }
 
@@ -44,15 +40,12 @@ if ($result->num_rows === 0) {
 $row = $result->fetch_assoc();
 $jabatan = $row['jabatan'];
 
-// Jika jabatan kosong
 if (!$jabatan) {
     http_response_code(404);
     echo json_encode(["error" => "Jabatan not set"]);
     exit;
 }
 
-// Sukses
 echo json_encode(["jabatan" => $jabatan]);
-
 $conn->close();
 ?>
