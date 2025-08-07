@@ -50,65 +50,66 @@ switch ($method) {
         echo json_encode($data);
         break;
 
-    // ========================
-    // POST: Submit Perizinan
-    // ========================
-    case 'POST':
-        // Cek apakah ini approval atau submit baru
-        if (isset($_POST['action'])) {
-            switch ($_POST['action']) {
-                case 'approve':
-                case 'reject':
-                    include 'approval_action.php';
-                    break;
-                default:
-                    http_response_code(400);
-                    echo json_encode(["status" => 400, "error" => "Invalid action"]);
-            }
-            break;
-        }
-
-        // Jika bukan action, maka submit perizinan baru
-        $data = $_POST;
-        if (!$data || !isset($data['username'])) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Invalid input."]);
-            break;
-        }
-
-        $username = $data['username'];
-        $keterangan = $data['keterangan'];
-        $jenis = $data['izin']; // dari frontend: 'izin', 'cuti', 'dinas'
-        $isMoved = false;
-        $fileName = "";
-
-        // Upload file
-        if (isset($_FILES['picture'])) {
-            $file = $_FILES['picture'];
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
-            if (!in_array($file['type'], $allowedTypes)) {
+   // ========================
+// POST: Submit Perizinan
+// ========================
+case 'POST':
+    // Cek apakah ini approval atau submit baru
+    if (isset($_POST['action'])) {
+        switch ($_POST['action']) {
+            case 'approve':
+            case 'reject':
+                include 'approval_action.php';
+                break;
+            default:
                 http_response_code(400);
-                echo json_encode(["status" => 400, "error" => "Invalid file type."]);
-                break;
-            }
-
-            $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
-            $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
-            $fileName = $cleanUsername . "_" . time() . "." . $ext;
-            $uploadPath = $uploadDir . $fileName;
-
-            if (!compressAndResizeImage($file['tmp_name'], $uploadPath, 500, 500)) {
-                http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "File resize failed."]);
-                break;
-            }
-            $isMoved = true;
+                echo json_encode(["status" => 400, "error" => "Invalid action"]);
         }
+        break;
+    }
 
-        if (!$isMoved) {
-            echo json_encode(["status" => 500, "error" => "Photo Move Error"]);
+    // Jika bukan action, maka submit perizinan baru
+    $data = $_POST;
+    if (!$data || !isset($data['username'])) {
+        http_response_code(400);
+        echo json_encode(["status" => 400, "error" => "Invalid input."]);
+        break;
+    }
+
+    $username = $data['username'];
+    $keterangan = $data['keterangan'];
+    $jenis = $data['izin']; // dari frontend: 'izin', 'cuti', 'dinas'
+    $fileName = null; // Default null jika tidak ada file
+
+    // Upload file (jika ada)
+    if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['picture'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+        
+        if (!in_array($file['type'], $allowedTypes)) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Invalid file type."]);
             break;
         }
+
+        $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
+        $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
+        $fileName = $cleanUsername . "_" . time() . "." . $ext;
+        $uploadPath = $uploadDir . $fileName;
+
+        if (!compressAndResizeImage($file['tmp_name'], $uploadPath, 500, 500)) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "File resize failed."]);
+            break;
+        }
+    }
+
+    // Validasi wajib upload file untuk jenis tertentu
+    if ($fileName === null && in_array($jenis, ['izin', 'cuti', 'dinas', 'datang telat', 'pulang cepat'])) {
+        http_response_code(400);
+        echo json_encode(["status" => 400, "error" => "Foto bukti wajib diupload untuk jenis ini"]);
+        break;
+    }
 
         // Ambil department dari user_profiles
         $dept = "Unknown";
