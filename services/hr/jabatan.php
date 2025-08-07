@@ -1,6 +1,7 @@
 <?php
 header("Content-Type: application/json");
-include 'db.php';    
+include 'db.php';     // ✅ Diperbaiki: dari /api ke root
+include 'auth.php';   // ✅ Diperbaiki
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
