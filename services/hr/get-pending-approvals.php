@@ -1,9 +1,26 @@
 <?php
 header("Content-Type: application/json");
-include '../../db.php'; // ✅ Perbaiki path
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// 🔽 Tambahkan log
+error_log("=== START get-pending-approvals.php ===");
+error_log("GET: " . print_r($_GET, true));
+
+include '../../db.php';
+
+// 🔽 Cek koneksi
+if (!$conn) {
+    error_log("DB Connection failed");
+    http_response_code(500);
+    echo json_encode(["error" => "DB Connection failed"]);
+    exit;
+}
 
 $role = $_GET['role'] ?? '';
 $username = $_GET['username'] ?? '';
+
+error_log("Role: $role, Username: $username");
 
 if (empty($role) || empty($username)) {
     http_response_code(400);
@@ -29,11 +46,26 @@ WHERE
 ORDER BY p.createdAt DESC
 ";
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $role);
-$stmt->execute();
-$result = $stmt->get_result();
+error_log("SQL: $sql");
+error_log("Role parameter: $role");
 
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    error_log("Prepare failed: " . $conn->error);
+    http_response_code(500);
+    echo json_encode(["error" => "Prepare failed", "sql_error" => $conn->error]);
+    exit;
+}
+
+$stmt->bind_param("s", $role);
+if (!$stmt->execute()) {
+    error_log("Execute failed: " . $stmt->error);
+    http_response_code(500);
+    echo json_encode(["error" => "Execute failed", "sql_error" => $stmt->error]);
+    exit;
+}
+
+$result = $stmt->get_result();
 $requests = [];
 while ($row = $result->fetch_assoc()) {
     $requests[] = [
@@ -54,5 +86,6 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
+error_log("Found " . count($requests) . " pending approvals");
 echo json_encode($requests);
 ?>
