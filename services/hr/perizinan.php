@@ -6,46 +6,25 @@ ini_set('display_errors', 1);
 include 'db.php';
 include 'utils/compressResize.php';
 
-// Logging awal untuk debugging
-file_put_contents('/tmp/perizinan_debug.log', "\n" . date('Y-m-d H:i:s') . " - New request: " . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
-
 $method = $_SERVER['REQUEST_METHOD'];
 $uploadDir = "/var/www/html/uploads/perizinan/";
 
-// Pastikan direktori upload ada
 if (!is_dir($uploadDir)) {
-    if (!mkdir($uploadDir, 0777, true)) {
-        $error = "Failed to create upload directory";
-        file_put_contents('/tmp/perizinan_debug.log', date('Y-m-d H:i:s') . " - " . $error . "\n", FILE_APPEND);
-        http_response_code(500);
-        echo json_encode(["status" => 500, "error" => $error]);
-        exit;
-    }
+    mkdir($uploadDir, 0777, true);
 }
 
-function logError($message) {
-    file_put_contents('/tmp/perizinan_debug.log', date('Y-m-d H:i:s') . " - ERROR: " . $message . "\n", FILE_APPEND);
-}
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-function validateFileUpload($file) {
-    $allowedTypes = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/jpg' => 'jpg'];
-    
-    // Cek error code
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        return ["status" => false, "error" => "File upload error code: " . $file['error']];
+// Fungsi ambil username (POST atau Authorization header)
+function getAuthUsername($conn) {
+    if (isset($_POST['username'])) {
+        return $conn->real_escape_string($_POST['username']);
     }
-    
-    // Cek tipe file
-    if (!array_key_exists($file['type'], $allowedTypes)) {
-        return ["status" => false, "error" => "Invalid file type. Only JPG, PNG, GIF allowed"];
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $token = str_replace('Bearer ', '', $_SERVER['HTTP_AUTHORIZATION']);
+        // Decode token jika pakai JWT (optional)
     }
-    
-    // Cek ukuran file (max 5MB)
-    if ($file['size'] > 5 * 1024 * 1024) {
-        return ["status" => false, "error" => "File size too large. Max 5MB allowed"];
-    }
-    
-    return ["status" => true, "ext" => $allowedTypes[$file['type']]];
+    return null;
 }
 
 switch ($method) {
@@ -54,56 +33,28 @@ switch ($method) {
     // ========================
     case 'GET':
         if (!isset($_GET['username'])) {
-            logError("GET request without username");
             http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Parameter username required"]);
+            echo json_encode(["status" => 400, "error" => "No Username!"]);
             break;
         }
-
         $username = $conn->real_escape_string($_GET['username']);
-        
-        try {
-            $sql = "SELECT p.*, 
-                   (SELECT GROUP_CONCAT(CONCAT(a.step_order, ':', a.status) SEPARATOR ',') 
-                    FROM approvals a WHERE a.request_id = p.id) as approval_steps
-                   FROM hr_perizinan p 
-                   WHERE p.username = ? 
-                   ORDER BY p.createdAt DESC";
-            
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("s", $username);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            
-            $data = [];
-            while ($row = $result->fetch_assoc()) {
-                // Parse approval steps
-                $approvalSteps = [];
-                if (!empty($row['approval_steps'])) {
-                    $steps = explode(',', $row['approval_steps']);
-                    foreach ($steps as $step) {
-                        list($order, $status) = explode(':', $step);
-                        $approvalSteps[$order] = $status;
-                    }
-                }
-                $row['approval_steps'] = $approvalSteps;
-                $data[] = $row;
-            }
-            
-            echo json_encode(["status" => 200, "data" => $data]);
-            
-        } catch (Exception $e) {
-            logError("GET query failed: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => "Database error"]);
+        $sql = "SELECT * FROM hr_perizinan WHERE username = ? ORDER BY createdAt DESC";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = [];
+        while ($row = $result->fetch_assoc()) {
+            $data[] = $row;
         }
+        echo json_encode($data);
         break;
 
     // ========================
     // POST: Submit Perizinan
     // ========================
     case 'POST':
-        // Cek jika ini request approval
+        // Cek jika approval
         if (isset($_POST['action'])) {
             switch ($_POST['action']) {
                 case 'approve':
@@ -119,150 +70,112 @@ switch ($method) {
 
         // Validasi input utama
         if (!isset($_POST['username'], $_POST['keterangan'], $_POST['izin'])) {
-            logError("Missing required fields");
             http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Username, keterangan, and jenis izin are required"]);
+            echo json_encode(["status" => 400, "error" => "Invalid input."]);
             break;
         }
 
         $username = $conn->real_escape_string($_POST['username']);
         $keterangan = $conn->real_escape_string($_POST['keterangan']);
         $jenis = $conn->real_escape_string($_POST['izin']);
-        $fileName = null;
+        $isMoved = false;
+        $fileName = "";
 
-        // Proses upload file jika ada
-        if (isset($_FILES['picture']) && $_FILES['picture']['error'] === UPLOAD_ERR_OK) {
+        // Upload dan resize gambar
+        if (isset($_FILES['picture'])) {
             $file = $_FILES['picture'];
-            $validation = validateFileUpload($file);
-            
-            if (!$validation['status']) {
-                logError("File validation failed: " . $validation['error']);
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+
+            if (!in_array($file['type'], $allowedTypes)) {
                 http_response_code(400);
-                echo json_encode(["status" => 400, "error" => $validation['error']]);
+                echo json_encode(["status" => 400, "error" => "Invalid file type."]);
                 break;
             }
 
-            $ext = $validation['ext'];
+            $ext = pathinfo($file["name"], PATHINFO_EXTENSION);
             $cleanUsername = preg_replace("/[^a-zA-Z0-9_-]/", "", $username);
             $fileName = $cleanUsername . "_" . time() . "." . $ext;
             $uploadPath = $uploadDir . $fileName;
 
             try {
                 if (!compressAndResizeImage($file['tmp_name'], $uploadPath, 500, 500)) {
-                    logError("Image compression failed");
                     http_response_code(500);
-                    echo json_encode(["status" => 500, "error" => "Failed to process image"]);
+                    echo json_encode(["status" => 500, "error" => "File resize failed."]);
                     break;
                 }
+                $isMoved = true;
             } catch (Exception $e) {
-                logError("Image processing exception: " . $e->getMessage());
                 http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "Image processing error"]);
+                echo json_encode(["status" => 500, "error" => "Resize exception: " . $e->getMessage()]);
                 break;
             }
-        } elseif (in_array($jenis, ['izin', 'cuti', 'dinas'])) {
-            // Jenis izin tertentu wajib ada fotonya
-            logError("Photo required for this request type");
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Photo evidence is required for this request type"]);
+        }
+
+        if (!$isMoved) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "Photo Move Error"]);
             break;
         }
 
-        // Mulai transaksi database
-        $conn->begin_transaction();
-
-        try {
-            // 1. Ambil department user
-            $dept = "Unknown";
-            $sql = "SELECT department FROM user_profiles WHERE username = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("s", $username);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            if ($row = $result->fetch_assoc()) {
-                $dept = $row['department'];
-            }
-
-            // 2. Ambil total langkah approval
-            $sql = "SELECT COUNT(*) as count FROM approval_steps WHERE request_type = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("s", $jenis);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $row = $result->fetch_assoc();
-            $total_steps = $row ? (int)$row['count'] : 0;
-
-            if ($total_steps < 1) {
-                throw new Exception("No approval steps defined for request type: " . $jenis);
-            }
-
-            // 3. Insert data perizinan utama
-            $sql = "INSERT INTO hr_perizinan (
-                    username, keterangan, jenis, foto, department, 
-                    total_steps, current_step, approval_status, status
-                ) VALUES (?, ?, ?, ?, ?, ?, 1, 'pending', 'pending')";
-            
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssi", $username, $keterangan, $jenis, $fileName, $dept, $total_steps);
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to insert main record: " . $stmt->error);
-            }
-
-            $requestId = $stmt->insert_id;
-
-            // 4. Buat record approval untuk setiap step
-            $sql = "INSERT INTO approvals (request_id, step_order, role, status)
-                    SELECT ?, step_order, required_role, 'pending' 
-                    FROM approval_steps 
-                    WHERE request_type = ?
-                    ORDER BY step_order";
-            
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("is", $requestId, $jenis);
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to create approval steps: " . $stmt->error);
-            }
-
-            // Commit transaksi jika semua sukses
-            $conn->commit();
-
-            // Response sukses
-            echo json_encode([
-                "status" => 200, 
-                "message" => "Request submitted successfully",
-                "data" => [
-                    "request_id" => $requestId,
-                    "total_steps" => $total_steps
-                ]
-            ]);
-
-        } catch (Exception $e) {
-            // Rollback jika ada error
-            $conn->rollback();
-            logError("Transaction failed: " . $e->getMessage());
-            
-            // Hapus file yang sudah diupload jika ada
-            if ($fileName && file_exists($uploadDir . $fileName)) {
-                unlink($uploadDir . $fileName);
-            }
-            
-            http_response_code(500);
-            echo json_encode([
-                "status" => 500, 
-                "error" => "System error processing your request",
-                "debug" => $e->getMessage() // Hanya untuk development, hapus di production
-            ]);
+        // Ambil department dari user_profiles
+        $dept = "Unknown";
+        $sql = "SELECT department FROM user_profiles WHERE username = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $dept = $row['department'];
         }
+
+        // Ambil jumlah langkah approval dari approval_steps
+        $sql = "SELECT COUNT(*) as count FROM approval_steps WHERE request_type = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $jenis);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $total_steps = $row && isset($row['count']) ? (int)$row['count'] : 0;
+
+        if ($total_steps < 1) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Approval steps not defined for '$jenis'"]);
+            break;
+        }
+
+        // Insert ke hr_perizinan
+        $sql = "INSERT INTO hr_perizinan (username, keterangan, jenis, foto, department, total_steps, current_step, approval_status, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 1, 'pending', 'pending')";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("sssssi", $username, $keterangan, $jenis, $fileName, $dept, $total_steps);
+
+        if (!$stmt->execute()) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "DB Error: " . $stmt->error]);
+            break;
+        }
+
+        $requestId = $stmt->insert_id;
+
+        // Insert approval step
+        for ($step = 1; $step <= $total_steps; $step++) {
+            $sql2 = "INSERT INTO approvals (request_id, step_order, role, status) 
+                     SELECT ?, ?, required_role, 'pending' FROM approval_steps 
+                     WHERE request_type = ? AND step_order = ?";
+            $stmt2 = $conn->prepare($sql2);
+            $stmt2->bind_param("iiss", $requestId, $step, $jenis, $step);
+            $stmt2->execute();
+        }
+
+        echo json_encode(["status" => 200, "message" => "Success", "id" => $requestId]);
         break;
 
     // ========================
-    // METHOD TIDAK DIKENALI
+    // METHOD TIDAK VALID
     // ========================
     default:
         http_response_code(405);
-        echo json_encode(["status" => 405, "error" => "Method not allowed"]);
+        echo json_encode(["status" => 405, "error" => "Invalid request method"]);
         break;
 }
 
