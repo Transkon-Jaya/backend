@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
-include '../../db.php';  // Sesuaikan path ke db.php
-include '../../auth.php'; // Pastikan ada fungsi verifyToken()
+include 'db.php';  // Sesuaikan path ke db.php
+include 'auth.php'; // Pastikan ada fungsi verifyToken()
 
 // Hanya boleh method GET
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
