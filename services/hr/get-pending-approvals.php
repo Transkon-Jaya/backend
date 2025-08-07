@@ -77,32 +77,45 @@ if (!$stmt->execute()) {
 
 $result = $stmt->get_result();
 $requests = [];
+
+// Log jumlah row yang ditemukan
+error_log("Found rows: " . $result->num_rows);
+
 while ($row = $result->fetch_assoc()) {
-    $data[] = [
+    error_log("Processing request ID: " . $row['id']);
+    
+    $requests[] = [
         "id" => $row['id'],
         "type" => $row['jenis'],
         "createdAt" => $row['createdAt'],
         "current_step" => (int)$row['current_step'],
-        "total_steps" => 3, // bisa ambil dari DB atau default
+        "total_steps" => (int)$row['total_steps'] ?: 3, // Default 3 jika tidak ada
         "status" => $row['approval_status'],
         "requester" => [
             "name" => $row['name'],
             "department" => $row['department'],
-            "avatar" => null, // atau ambil dari DB jika ada
-            "email" => $row['username'] . "@transkon.co.id"
+            "avatar" => $row['avatar'], // Gunakan avatar dari query
+            "email" => $row['email'] ?: $row['username'] . "@transkon.co.id"
         ],
         "attachments" => $row['foto'] ? [[
             "name" => $row['foto'],
-            "size" => "N/A"
+            "size" => "N/A",
+            "url" => "/uploads/perizinan/" . $row['foto'] // Tambahkan URL lengkap
         ]] : [],
         "details" => $row['keterangan']
     ];
 }
 
+// Log data yang akan dikirim
+error_log("Data to send: " . json_encode($requests));
 
 // Bersihkan buffer sebelum output
 ob_clean();
-echo json_encode($requests);
+echo json_encode([
+    "success" => true,
+    "data" => $requests,
+    "count" => count($requests)
+]);
 ob_end_flush();
 exit;
 ?>
