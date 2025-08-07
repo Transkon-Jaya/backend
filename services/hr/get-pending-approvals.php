@@ -78,23 +78,27 @@ if (!$stmt->execute()) {
 $result = $stmt->get_result();
 $requests = [];
 while ($row = $result->fetch_assoc()) {
-    $requests[] = [
-        'id' => $row['id'],
-        'type' => $row['jenis'],
-        'status' => $row['approval_status'],
-        'createdAt' => $row['createdAt'],
-        'current_step' => $row['current_step'],
-        'total_steps' => $row['total_steps'],
-        'requester' => [
-            'name' => $row['name'],
-            'email' => $row['email'],
-            'department' => $row['department'],
-            'avatar' => $row['avatar'] ? "/uploads/profiles/{$row['avatar']}" : "/default.jpeg"
+    $data[] = [
+        "id" => $row['id'],
+        "type" => $row['jenis'],
+        "createdAt" => $row['createdAt'],
+        "current_step" => (int)$row['current_step'],
+        "total_steps" => 3, // bisa ambil dari DB atau default
+        "status" => $row['approval_status'],
+        "requester" => [
+            "name" => $row['name'],
+            "department" => $row['department'],
+            "avatar" => null, // atau ambil dari DB jika ada
+            "email" => $row['username'] . "@transkon.co.id"
         ],
-        'details' => $row['keterangan'],
-        'attachments' => $row['foto'] ? [['name' => basename($row['foto']), 'size' => 'Unknown']] : []
+        "attachments" => $row['foto'] ? [[
+            "name" => $row['foto'],
+            "size" => "N/A"
+        ]] : [],
+        "details" => $row['keterangan']
     ];
 }
+
 
 // Bersihkan buffer sebelum output
 ob_clean();
