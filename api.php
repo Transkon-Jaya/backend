@@ -17,6 +17,7 @@ $allowed_routes = [
     'absensi'        => 'services/hr/absensi.php',
     // 'timeoff'        => 'services/hr/timeoff.php',
     'perizinan'      => 'services/hr/perizinan.php',
+    'jabatan'        => 'services/hr/jabatan.php',
     'approval-action' => 'services/hr/approval-action.php',
     'get-pending-approvals' => 'services/hr/get-pending-approvals.php',
     'absensi-status' => 'services/hr/absensi-status.php',
