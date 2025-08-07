@@ -1,35 +1,46 @@
 <?php
 header("Content-Type: application/json");
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Jangan tampilkan error ke user
 
-// 🔽 Tambahkan log
-error_log("=== START get-pending-approvals.php ===");
-error_log("GET: " . print_r($_GET, true));
+// Mulai output buffer untuk pastikan tidak ada output sebelum JSON
+ob_start();
 
-include '../../db.php';
+include '../../db.php';     // Dari /services/hr/get-pending-approvals.php → ke root
+include '../../auth.php';   // Untuk verifyToken()
 
-// 🔽 Cek koneksi
-if (!$conn) {
-    error_log("DB Connection failed");
-    http_response_code(500);
-    echo json_encode(["error" => "DB Connection failed"]);
+// Hanya boleh GET
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode(["error" => "Method not allowed"]);
+    ob_end_flush();
+    exit;
+}
+
+// Verifikasi token
+$user = verifyToken();
+if (!$user) {
+    http_response_code(401);
+    echo json_encode(["error" => "Unauthorized: Invalid or missing token"]);
+    ob_end_flush();
     exit;
 }
 
 $role = $_GET['role'] ?? '';
 $username = $_GET['username'] ?? '';
 
-error_log("Role: $role, Username: $username");
-
 if (empty($role) || empty($username)) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing role or username", "received" => $_GET]);
+    echo json_encode(["error" => "Missing role or username"]);
+    ob_end_flush();
     exit;
 }
 
 $role = $conn->real_escape_string($role);
 $username = $conn->real_escape_string($username);
+
+// Log untuk debugging (cek di error.log)
+error_log("get-pending-approvals: role=$role, username=$username");
 
 $sql = "
 SELECT 
@@ -46,14 +57,12 @@ WHERE
 ORDER BY p.createdAt DESC
 ";
 
-error_log("SQL: $sql");
-error_log("Role parameter: $role");
-
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     error_log("Prepare failed: " . $conn->error);
     http_response_code(500);
-    echo json_encode(["error" => "Prepare failed", "sql_error" => $conn->error]);
+    echo json_encode(["error" => "Database prepare error"]);
+    ob_end_flush();
     exit;
 }
 
@@ -61,7 +70,8 @@ $stmt->bind_param("s", $role);
 if (!$stmt->execute()) {
     error_log("Execute failed: " . $stmt->error);
     http_response_code(500);
-    echo json_encode(["error" => "Execute failed", "sql_error" => $stmt->error]);
+    echo json_encode(["error" => "Database execute error"]);
+    ob_end_flush();
     exit;
 }
 
@@ -86,6 +96,9 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
-error_log("Found " . count($requests) . " pending approvals");
+// Bersihkan buffer sebelum output
+ob_clean();
 echo json_encode($requests);
+ob_end_flush();
+exit;
 ?>
