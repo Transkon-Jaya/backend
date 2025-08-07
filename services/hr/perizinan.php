@@ -98,12 +98,16 @@ switch ($method) {
             $uploadPath = $uploadDir . $fileName;
 
             if (!compressAndResizeImage($file['tmp_name'], $uploadPath, 500, 500)) {
-                http_response_code(500);
-                echo json_encode(["status" => 500, "error" => "File resize failed."]);
-                break;
+        http_response_code(500);
+        echo json_encode(["status" => 500, "error" => "File resize failed."]);
+        break;
             }
-            $isMoved = true;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["status" => 500, "error" => "Resize exception: " . $e->getMessage()]);
+            break;
         }
+            }
 
         if (!$isMoved) {
             echo json_encode(["status" => 500, "error" => "Photo Move Error"]);
