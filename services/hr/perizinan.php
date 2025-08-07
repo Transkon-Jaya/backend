@@ -146,12 +146,14 @@ switch ($method) {
 
             // 4. Insert ke approvals untuk setiap step
             $sql_approval = "INSERT INTO approvals (request_id, step_order, role, status) 
-                             SELECT ?, step_order, required_role, 'pending' 
-                             FROM approval_steps 
-                             WHERE request_type = ? 
-                             ORDER BY step_order";
-            $stmt_approval = $conn->prepare($sql_approval);
-            $stmt_approval->bind_param("is", $requestId, $jenis);
+                 SELECT ?, step_order, required_role, 'pending' 
+                 FROM approval_steps 
+                 WHERE request_type = ? 
+                 ORDER BY step_order";
+$stmt_approval = $conn->prepare($sql_approval);
+$stmt_approval->bind_param("is", $requestId, $jenis);
+$stmt_approval->execute();
+$stmt_approval->close();
 
             if (!$stmt_approval->execute()) {
                 throw new Exception("Gagal insert approval steps: " . $stmt_approval->error);
