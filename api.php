@@ -25,6 +25,7 @@ $allowed_routes = [
     'absensi-latest' => 'services/hr/absensi-latest.php',
     'absensi-summary'=> 'services/hr/absensi-summary.php',
     'transmittal_detail' => 'services/commercial/transmittal_detail.php',
+    'transmittal_documents' => 'services/commercial/transmittal_documents.php',
     'de_site'        => 'services/de/de_site.php',
     'down_equipment' => 'services/de/down_equipment.php',
     'hr-lokasi'      => 'services/hr/lokasi.php',

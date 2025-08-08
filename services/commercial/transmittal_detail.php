@@ -1,23 +1,29 @@
 <?php
-require 'db.php'; // koneksi ke database
+require 'db.php';
 
 header('Content-Type: application/json');
-
-// Cek method
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
         if (isset($_GET['ta_id'])) {
-            // Ambil data satu baris
+            // Filter by TA ID
             $stmt = $pdo->prepare("SELECT * FROM transmittal_detail WHERE ta_id = ?");
             $stmt->execute([$_GET['ta_id']]);
             $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        } elseif (isset($_GET['start_date']) && isset($_GET['end_date'])) {
+            // Filter by date range
+            $stmt = $pdo->prepare("SELECT * FROM transmittal_detail WHERE date BETWEEN ? AND ?");
+            $stmt->execute([$_GET['start_date'], $_GET['end_date']]);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         } else {
-            // Ambil semua data
+            // Tampilkan semua data
             $stmt = $pdo->query("SELECT * FROM transmittal_detail");
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
+
         echo json_encode($data);
         break;
 
@@ -79,6 +85,5 @@ switch ($method) {
     default:
         http_response_code(405);
         echo json_encode(['error' => 'Method Not Allowed']);
-        break;
 }
 ?>
