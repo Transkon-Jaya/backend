@@ -35,44 +35,61 @@ switch ($method) {
     // 🔍 Debug: Cek input
     if (!$input) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid JSON input']);
+        echo json_encode(['error' => 'Invalid JSON input', 'received' => file_get_contents('php://input')]);
         exit;
     }
 
-    // Cek apakah ta_id ada
+    // Validasi ta_id wajib
     if (empty($input['ta_id'])) {
         http_response_code(400);
         echo json_encode(['error' => 'ta_id is required']);
         exit;
     }
 
-    $stmt = $pdo->prepare("INSERT INTO transmittal_detail (
-        ta_id, customer_name, date, from_origin, document_type,
-        attention, awb_reg, expeditur, ras_status, receiver_name,
-        receive_date, lastUpdated
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    
-    $values = [
-        $input['ta_id'],
-        $input['customer_name'] ?? null,
-        $input['date'] ?? null,
-        $input['from_origin'] ?? null,
-        $input['document_type'] ?? null,
-        $input['attention'] ?? null,
-        $input['awb_reg'] ?? null,
-        $input['expeditur'] ?? null,
-        $input['ras_status'] ?? null,
-        $input['receiver_name'] ?? null,
-        $input['receive_date'] ?? null,
-        date('Y-m-d H:i:s')
-    ];
-
     try {
+        $stmt = $pdo->prepare("INSERT INTO transmittal_detail (
+            ta_id, customer_name, date, from_origin, document_type,
+            attention, awb_reg, expeditur, ras_status, receiver_name,
+            receive_date, lastUpdated
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $values = [
+            $input['ta_id'],
+            $input['customer_name'] ?? null,
+            $input['date'] ?? null,
+            $input['from_origin'] ?? null,
+            $input['document_type'] ?? null,
+            $input['attention'] ?? null,
+            $input['awb_reg'] ?? null,
+            $input['expeditur'] ?? null,
+            $input['ras_status'] ?? null,
+            $input['receiver_name'] ?? null,
+            $input['receive_date'] ?? null,
+            date('Y-m-d H:i:s') // lastUpdated
+        ];
+
         $success = $stmt->execute($values);
-        echo json_encode(['success' => $success]);
-    } catch (PDOException $e) {
+
+        if (!$success) {
+            $errorInfo = $stmt->errorInfo();
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Database execute failed',
+                'details' => $errorInfo
+            ]);
+        } else {
+            echo json_encode(['success' => true]);
+        }
+
+    } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Database error', 'details' => $e->getMessage()]);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Exception occurred',
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
     }
     break;
 
