@@ -1,7 +1,7 @@
 <?php
 header("Content-Type: application/json");
-require 'db.php';
-require 'auth.php';
+require '../../api/db.php';
+require '../../api/auth.php';
 
 $currentUser = authorize();
 
