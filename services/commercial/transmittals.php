@@ -23,7 +23,7 @@ if ($method === 'POST') {
 
 $ta_id = $_GET['ta_id'] ?? ($_POST['ta_id'] ?? null);
 $page = max(1, (int)($_GET['page'] ?? 1));
-$limit = min(100, max(1, (int)($_GET['limit'] ?? 12));
+$limit = min(100, max(1, (int)($_GET['limit'] ?? 12)));
 $search = $_GET['search'] ?? null;
 $status = $_GET['status'] ?? null;
 
