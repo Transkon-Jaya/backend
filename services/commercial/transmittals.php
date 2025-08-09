@@ -222,9 +222,9 @@ try {
     throw new Exception("Method tidak diizinkan", 405);
 
 } catch (Exception $e) {
-    $conn->rollback();
     http_response_code($e->getCode() ?: 500);
-    echo json_encode(["status" => $e->getCode() ?: 500, "error" => $e->getMessage()]);
+    echo json_encode(["error" => $e->getMessage(), "trace" => $e->getTraceAsString()]);
+    exit;
 } finally {
     $conn->close();
 }
