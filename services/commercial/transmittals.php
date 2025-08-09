@@ -1,16 +1,30 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-header("Content-Type: application/json");
-require './db.php';
-require './auth.php';
+// Tambahkan CORS headers
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Max-Age: 86400");
 
-// 🔐 Ambil data user dari token JWT
+// Tangani preflight
+if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
+    http_response_code(200);
+    exit();
+}
+
+// Set content type
+header("Content-Type: application/json");
+
+// 🔐 Require file dengan path benar
+require '../../api/db.php';     // Sesuaikan path
+require '../../api/auth.php';   // Sesuaikan path
+
+// Ambil data user dari token JWT
 $currentUser = authorize();
 $currentName = $currentUser['name'] ?? 'system';
 $method = $_SERVER['REQUEST_METHOD'];
 
-// 🌐 Override _method dari POST/JSON agar bisa DELETE
+// Override _method dari POST/JSON agar bisa DELETE
 $originalMethod = $method;
 if ($method === 'POST') {
     $overrideMethod = $_POST['_method'] ?? $_GET['_method'] ?? null;
@@ -49,6 +63,12 @@ try {
             }
         }
 
+        // Validasi ras_status
+        $validStatus = ['Pending', 'Received', 'In Transit', 'Delivered'];
+        if (isset($input['ras_status']) && !in_array($input['ras_status'], $validStatus)) {
+            throw new Exception("ras_status harus salah satu dari: " . implode(', ', $validStatus), 400);
+        }
+
         // Generate TA ID jika tidak ada
         if (empty($input['ta_id'])) {
             $prefix = "TRJA";
@@ -62,72 +82,66 @@ try {
             if ($lastId && preg_match('/^TRJA(\d+)$/', $lastId, $matches)) {
                 $nextNum = (int)$matches[1] + 1;
             } else {
-                $nextNum = 2000; // Mulai dari TRJA2000
+                $nextNum = 2000;
             }
 
             $input['ta_id'] = $prefix . $nextNum;
         }
 
-       // Insert transmittal utama
-$sql = "INSERT INTO transmittals (
-    ta_id, date, from_origin, document_type, attention, 
-    company, address, state, awb_reg, expeditur, receiver_name, receive_date, ras_status, created_by
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Insert transmittal utama
+        $sql = "INSERT INTO transmittals (
+            ta_id, date, from_origin, document_type, attention, 
+            company, address, state, awb_reg, expeditur, receiver_name, receive_date, ras_status, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    throw new Exception("Prepare gagal: " . $conn->error);
-}
-
-$stmt->bind_param(
-    "ssssssssssssss",  // 14 parameter
-    $input['ta_id'],
-    $input['date'],
-    $input['from_origin'],
-    $input['document_type'],
-    $input['attention'] ?? null,
-    $input['company'] ?? null,
-    $input['address'] ?? null,
-    $input['state'] ?? null,
-    $input['awb_reg'] ?? null,
-    $input['expeditur'] ?? null,
-    $input['receiver_name'] ?? null,
-    $input['receive_date'] ?? null,
-    $input['ras_status'] ?? 'Pending',
-    $currentName
-);
-$stmt->execute();
-$ta_id = $input['ta_id'];
-
-        // Insert dokumen terkait
-       if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
-    $docSql = "INSERT INTO transmittal_documents (
-        ta_id, no_urut, doc_desc, remarks, created_by
-    ) VALUES (?, ?, ?, ?, ?)";
-    $docStmt = $conn->prepare($docSql);
-    foreach ($input['doc_details'] as $doc) {
-        // Validasi field wajib
-        if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) {
-            continue; // skip jika tidak lengkap
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Prepare gagal: " . $conn->error);
         }
-        $docStmt->bind_param(
-            "sisss",
-            $ta_id,
-            $doc['no_urut'],
-            $doc['doc_desc'],
-            $doc['remarks'] ?? null,
+
+        $stmt->bind_param(
+            "ssssssssssssss",
+            $input['ta_id'],
+            $input['date'],
+            $input['from_origin'],
+            $input['document_type'],
+            $input['attention'] ?? null,
+            $input['company'] ?? null,
+            $input['address'] ?? null,
+            $input['state'] ?? null,
+            $input['awb_reg'] ?? null,
+            $input['expeditur'] ?? null,
+            $input['receiver_name'] ?? null,
+            $input['receive_date'] ?? null,
+            $input['ras_status'] ?? 'Pending',
             $currentName
         );
-        $docStmt->execute();
-    }
-}
+        $stmt->execute();
+
+        // Insert dokumen terkait
+        if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
+            $docSql = "INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) VALUES (?, ?, ?, ?, ?)";
+            $docStmt = $conn->prepare($docSql);
+            foreach ($input['doc_details'] as $doc) {
+                if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
+                $docStmt->bind_param(
+                    "sisss",
+                    $input['ta_id'],
+                    $doc['no_urut'],
+                    $doc['doc_desc'],
+                    $doc['remarks'] ?? null,
+                    $currentName
+                );
+                $docStmt->execute();
+            }
+        }
 
         $conn->commit();
 
         echo json_encode([
             "status" => 201,
             "message" => "Transmittal berhasil dibuat",
-            "ta_id" => $ta_id
+            "ta_id" => $input['ta_id']
         ]);
         exit;
     }
@@ -142,6 +156,14 @@ $ta_id = $input['ta_id'];
 
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
+
+        // Validasi ras_status
+        if (isset($input['ras_status'])) {
+            $validStatus = ['Pending', 'Received', 'In Transit', 'Delivered'];
+            if (!in_array($input['ras_status'], $validStatus)) {
+                throw new Exception("ras_status harus salah satu dari: " . implode(', ', $validStatus), 400);
+            }
+        }
 
         $fields = [
             'date', 'from_origin', 'document_type', 'attention', 'company',
@@ -161,7 +183,6 @@ $ta_id = $input['ta_id'];
             }
         }
 
-        // Tambahkan updated_by
         $set[] = "updated_by = ?";
         $params[] = $currentName;
         $types .= 's';
@@ -182,16 +203,11 @@ $ta_id = $input['ta_id'];
 
         // Update dokumen jika ada
         if (!empty($input['doc_details'])) {
-            // Hapus yang lama
             $deleteStmt = $conn->prepare("DELETE FROM transmittal_documents WHERE ta_id = ?");
             $deleteStmt->bind_param("s", $ta_id);
             $deleteStmt->execute();
 
-            // Insert yang baru
-            $docSql = "INSERT INTO transmittal_documents (
-                ta_id, no_urut, doc_desc, remarks, created_by
-            ) VALUES (?, ?, ?, ?, ?)";
-
+            $docSql = "INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) VALUES (?, ?, ?, ?, ?)";
             $docStmt = $conn->prepare($docSql);
             foreach ($input['doc_details'] as $doc) {
                 $docStmt->bind_param(
@@ -220,12 +236,10 @@ $ta_id = $input['ta_id'];
             throw new Exception("TA ID tidak valid", 400);
         }
 
-        // Hapus dokumen terkait terlebih dahulu
         $stmt = $conn->prepare("DELETE FROM transmittal_documents WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
 
-        // Hapus transmittal utama
         $stmt = $conn->prepare("DELETE FROM transmittals WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
@@ -240,10 +254,7 @@ $ta_id = $input['ta_id'];
     // === GET /{ta_id} ======
     // ========================
     if ($method === 'GET' && $ta_id) {
-        // Ambil data transmittal utama
-        $stmt = $conn->prepare("
-            SELECT * FROM transmittals WHERE ta_id = ?
-        ");
+        $stmt = $conn->prepare("SELECT * FROM transmittals WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -251,12 +262,7 @@ $ta_id = $input['ta_id'];
 
         if (!$transmittal) throw new Exception("Transmittal tidak ditemukan", 404);
 
-        // Ambil dokumen terkait
-        $stmt = $conn->prepare("
-            SELECT * FROM transmittal_documents 
-            WHERE ta_id = ?
-            ORDER BY no_urut
-        ");
+        $stmt = $conn->prepare("SELECT * FROM transmittal_documents WHERE ta_id = ? ORDER BY no_urut");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
         $result = $stmt->get_result();
