@@ -69,12 +69,12 @@ try {
         // Insert transmittal utama
         $sql = "INSERT INTO transmittals (
             ta_id, date, from_origin, document_type, attention, 
-            company, address, state, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            company, address, state, awb_reg, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $conn->prepare($sql);
         $stmt->bind_param(
-            "sssssssss",
+            "ssssssssss",  
             $input['ta_id'],
             $input['date'],
             $input['from_origin'],
@@ -83,30 +83,34 @@ try {
             $input['company'] ?? null,
             $input['address'] ?? null,
             $input['state'] ?? null,
+            $input['awb_reg'] ?? null,  
             $currentName
         );
         $stmt->execute();
         $ta_id = $input['ta_id'];
 
         // Insert dokumen terkait
-        if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
-            $docSql = "INSERT INTO transmittal_documents (
-                ta_id, no_urut, doc_desc, remarks, created_by
-            ) VALUES (?, ?, ?, ?, ?)";
-
-            $docStmt = $conn->prepare($docSql);
-            foreach ($input['doc_details'] as $doc) {
-                $docStmt->bind_param(
-                    "sisss",
-                    $ta_id,
-                    $doc['no_urut'],
-                    $doc['doc_desc'],
-                    $doc['remarks'] ?? null,
-                    $currentName
-                );
-                $docStmt->execute();
-            }
+       if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
+    $docSql = "INSERT INTO transmittal_documents (
+        ta_id, no_urut, doc_desc, remarks, created_by
+    ) VALUES (?, ?, ?, ?, ?)";
+    $docStmt = $conn->prepare($docSql);
+    foreach ($input['doc_details'] as $doc) {
+        // Validasi field wajib
+        if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) {
+            continue; // skip jika tidak lengkap
         }
+        $docStmt->bind_param(
+            "sisss",
+            $ta_id,
+            $doc['no_urut'],
+            $doc['doc_desc'],
+            $doc['remarks'] ?? null,
+            $currentName
+        );
+        $docStmt->execute();
+    }
+}
 
         $conn->commit();
 
