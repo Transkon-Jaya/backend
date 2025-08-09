@@ -66,28 +66,36 @@ try {
             $input['ta_id'] = $prefix . $nextNum;
         }
 
-        // Insert transmittal utama
-        $sql = "INSERT INTO transmittals (
-            ta_id, date, from_origin, document_type, attention, 
-            company, address, state, awb_reg, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+       // Insert transmittal utama
+$sql = "INSERT INTO transmittals (
+    ta_id, date, from_origin, document_type, attention, 
+    company, address, state, awb_reg, expeditur, receiver_name, receive_date, ras_status, created_by
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param(
-            "ssssssssss",  
-            $input['ta_id'],
-            $input['date'],
-            $input['from_origin'],
-            $input['document_type'],
-            $input['attention'] ?? null,
-            $input['company'] ?? null,
-            $input['address'] ?? null,
-            $input['state'] ?? null,
-            $input['awb_reg'] ?? null,  
-            $currentName
-        );
-        $stmt->execute();
-        $ta_id = $input['ta_id'];
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    throw new Exception("Prepare gagal: " . $conn->error);
+}
+
+$stmt->bind_param(
+    "ssssssssssssss",  // 14 parameter
+    $input['ta_id'],
+    $input['date'],
+    $input['from_origin'],
+    $input['document_type'],
+    $input['attention'] ?? null,
+    $input['company'] ?? null,
+    $input['address'] ?? null,
+    $input['state'] ?? null,
+    $input['awb_reg'] ?? null,
+    $input['expeditur'] ?? null,
+    $input['receiver_name'] ?? null,
+    $input['receive_date'] ?? null,
+    $input['ras_status'] ?? 'Pending',
+    $currentName
+);
+$stmt->execute();
+$ta_id = $input['ta_id'];
 
         // Insert dokumen terkait
        if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
