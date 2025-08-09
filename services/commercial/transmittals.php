@@ -49,15 +49,21 @@ try {
 
         // Generate TA ID jika tidak ada
         if (empty($input['ta_id'])) {
-            $year = date('Y');
+            $prefix = "TRJA";
             $stmt = $conn->prepare("SELECT MAX(ta_id) as last_id FROM transmittals WHERE ta_id LIKE ?");
-            $like = "TA$year%";
-            $stmt->bind_param("s", $like);
+            $searchPattern = $prefix . "%";
+            $stmt->bind_param("s", $searchPattern);
             $stmt->execute();
             $result = $stmt->get_result();
-            $lastId = $result->fetch_assoc()['last_id'] ?? "TA{$year}0000";
-            $nextNum = (int)substr($lastId, 6) + 1;
-            $input['ta_id'] = sprintf("TA%d%04d", $year, $nextNum);
+            $lastId = $result->fetch_assoc()['last_id'] ?? null;
+
+            if ($lastId && preg_match('/^TRJA(\d+)$/', $lastId, $matches)) {
+                $nextNum = (int)$matches[1] + 1;
+            } else {
+                $nextNum = 2000; // Mulai dari TRJA2000
+            }
+
+            $input['ta_id'] = $prefix . $nextNum;
         }
 
         // Insert transmittal utama
