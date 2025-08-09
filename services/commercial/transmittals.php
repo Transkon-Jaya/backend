@@ -9,85 +9,66 @@ $user = verifyToken();
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
-    // === GET by ta_id ===
-if ($method === 'GET' && $ta_id) {
-    $stmt = $conn->prepare("SELECT * FROM transmittals WHERE ta_id = ?");
-    $stmt->bind_param("s", $ta_id);
-    $stmt->execute();
-    $trans = $stmt->get_result()->fetch_assoc();
+   if ($method === 'GET' && isset($_GET['ta_id'])) {
+    $ta_id = $_GET['ta_id'];
 
-    if (!$trans) {
-        throw new Exception("Tidak ditemukan", 404);
-    }
-
-    $stmt = $conn->prepare("SELECT * FROM transmittal_documents WHERE ta_id = ? ORDER BY no_urut");
-    $stmt->bind_param("s", $ta_id);
-    $stmt->execute();
-    $docs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-    $trans['doc_details'] = $docs;
-
-    echo json_encode([
-        "status" => 200,
-        "data" => $trans
-    ]);
-    exit;
-}
-
-// === GET list ===
-if ($method === 'GET') {
-    $sql = "SELECT SQL_CALC_FOUND_ROWS 
-                t.ta_id, t.date, t.from_origin, t.document_type, t.attention, 
-                t.company, t.ras_status, COUNT(d.id) as document_count, 
-                t.created_by, t.created_at
-            FROM transmittals t
-            LEFT JOIN transmittal_documents d ON t.ta_id = d.ta_id
-            WHERE 1=1";
-
-    $params = [];
-    $types = '';
-
-    if (!empty($search)) {
-        $term = "%$search%";
-        $sql .= " AND (t.ta_id LIKE ? OR t.from_origin LIKE ? OR t.document_type LIKE ?)";
-        $params = array_merge($params, [$term, $term, $term]);
-        $types .= 'sss';
-    }
-
-    if (!empty($status)) {
-        $sql .= " AND t.ras_status = ?";
-        $params[] = $status;
-        $types .= 's';
-    }
-
-    $sql .= " GROUP BY t.ta_id ORDER BY t.date DESC LIMIT ? OFFSET ?";
-    $params[] = $limit;
-    $params[] = ($page - 1) * $limit;
-    $types .= 'ii';
+    $sql = "SELECT id, ta_id, no_urut, doc_desc, remarks, created_at, created_by
+            FROM transmittal_documents
+            WHERE ta_id = ?
+            ORDER BY no_urut ASC";
 
     $stmt = $conn->prepare($sql);
-
-    // Bind hanya jika ada params
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode([
+            "status" => 500,
+            "error" => "Prepare failed: " . $conn->error
+        ]);
+        exit;
     }
 
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $items = $result->fetch_all(MYSQLI_ASSOC);
+    // Bind parameter
+    $stmt->bind_param("s", $ta_id);
 
-    $total = $conn->query("SELECT FOUND_ROWS() as total")->fetch_assoc()['total'];
+    // Eksekusi query
+    if (!$stmt->execute()) {
+        http_response_code(500);
+        echo json_encode([
+            "status" => 500,
+            "error" => "Execute failed: " . $stmt->error
+        ]);
+        exit;
+    }
+
+    // Ambil hasil (fallback kalau get_result() tidak tersedia)
+    $docs = [];
+    $res = $stmt->get_result();
+    if ($res) {
+        $docs = $res->fetch_all(MYSQLI_ASSOC);
+    } else {
+        // fallback bind_result
+        $stmt->store_result();
+        $stmt->bind_result($id, $ta_id_db, $no_urut, $doc_desc, $remarks, $created_at, $created_by);
+        while ($stmt->fetch()) {
+            $docs[] = [
+                "id" => $id,
+                "ta_id" => $ta_id_db,
+                "no_urut" => $no_urut,
+                "doc_desc" => $doc_desc,
+                "remarks" => $remarks,
+                "created_at" => $created_at,
+                "created_by" => $created_by
+            ];
+        }
+    }
+
+    $stmt->close();
 
     echo json_encode([
         "status" => 200,
-        "data" => [
-            "items" => $items,
-            "totalCount" => (int) $total,
-            "page" => $page,
-            "limit" => $limit,
-            "totalPages" => ceil($total / $limit)
-        ]
+        "data" => $docs
     ]);
     exit;
 }
+
 }
