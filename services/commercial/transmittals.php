@@ -77,7 +77,7 @@ try {
             }
             
             // Generate TA ID
-            $prefix = "TRJA";
+            $prefix = "TA";
             $lastId = $conn->query("SELECT MAX(ta_id) FROM transmittals_new WHERE ta_id LIKE '{$prefix}%'")->fetch_row()[0];
             $nextNum = $lastId ? (int)substr($lastId, strlen($prefix)) + 1 : 2001;
             $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
