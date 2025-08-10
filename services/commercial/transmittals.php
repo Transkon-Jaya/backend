@@ -174,113 +174,122 @@ try {
     }
 
     // === UPDATE (PUT) ===
-    if ($method === 'PUT') {
-        if (!$ta_id) {
-            throw new Exception("TA ID tidak diberikan", 400);
-        }
-
-        $input = json_decode(file_get_contents("php://input"), true);
-        if (!is_array($input)) {
-            throw new Exception("Input tidak valid", 400);
-        }
-
-        // Validasi ras_status
-        if (isset($input['ras_status']) && $input['ras_status'] !== '') {
-            $validStatus = ['Pending', 'Received', 'In Transit', 'Delivered'];
-            if (!in_array($input['ras_status'], $validStatus)) {
-                throw new Exception("ras_status tidak valid", 400);
-            }
-        }
-
-        // Cek eksistensi
-        $stmt = $conn->prepare("SELECT 1 FROM transmittals WHERE ta_id = ?");
-        $stmt->bind_param("s", $ta_id);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows === 0) {
-            throw new Exception("Transmittal tidak ditemukan", 404);
-        }
-        $stmt->close();
-
-        // Siapkan field untuk update
-        $fields = ['date', 'from_origin', 'document_type', 'attention', 'company', 'address', 'state', 'awb_reg', 'receiver_name', 'expeditur', 'receive_date', 'ras_status'];
-        $setParts = [];
-        $params = [];
-        $types = '';
-
-        foreach ($fields as $f) {
-            if (isset($input[$f])) {
-                $setParts[] = "$f = ?";
-                $params[] = $input[$f];
-                $types .= 's';
-            }
-        }
-
-        if (empty($setParts)) {
-            throw new Exception("Tidak ada data untuk diperbarui", 400);
-        }
-
-        $setParts[] = "updated_by = ?";
-        $params[] = $currentName;
-        $types .= 's';
-
-        $params[] = $ta_id;
-        $types .= 's';
-
-        $sql = "UPDATE transmittals SET " . implode(', ', $setParts) . " WHERE ta_id = ?";
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Gagal prepare update: " . $conn->error, 500);
-        }
-
-        $stmt->bind_param($types, ...$params);
-        if (!$stmt->execute()) {
-            throw new Exception("Update gagal: " . $stmt->error, 500);
-        }
-        $stmt->close();
-
-        // Update dokumen: hapus dan insert baru
-        if (isset($input['doc_details'])) {
-            $delStmt = $conn->prepare("DELETE FROM transmittal_documents WHERE ta_id = ?");
-            $delStmt->bind_param("s", $ta_id);
-            if (!$delStmt->execute()) {
-                throw new Exception("Gagal hapus dokumen lama", 500);
-            }
-            $delStmt->close();
-
-            if (!empty($input['doc_details'])) {
-                $insStmt = $conn->prepare("INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) VALUES (?, ?, ?, ?, ?)");
-                if (!$insStmt) {
-                    throw new Exception("Gagal prepare insert dokumen", 500);
-                }
-
-                foreach ($input['doc_details'] as $doc) {
-                    if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
-
-                    $insStmt->bind_param(
-                        "sisss",
-                        $ta_id,
-                        (int)$doc['no_urut'],
-                        $doc['doc_desc'],
-                        $doc['remarks'] ?? '',
-                        $currentName
-                    );
-                    if (!$insStmt->execute()) {
-                        throw new Exception("Gagal simpan dokumen: " . $insStmt->error, 500);
-                    }
-                }
-                $insStmt->close();
-            }
-        }
-
-        $conn->commit();
-
-        http_response_code(200);
-        echo json_encode([
-            "status" => 200,
-            "message" => "Transmittal berhasil diperbarui"
-        ]);
-        exit;
+if ($method === 'PUT') {
+    if (!$ta_id) {
+        throw new Exception("TA ID tidak diberikan", 400);
     }
+
+    $input = json_decode(file_get_contents("php://input"), true);
+    if (!is_array($input)) {
+        throw new Exception("Input tidak valid", 400);
+    }
+
+    // Validasi ras_status
+    if (isset($input['ras_status']) && $input['ras_status'] !== '') {
+        $validStatus = ['Pending', 'Received', 'In Transit', 'Delivered'];
+        if (!in_array($input['ras_status'], $validStatus)) {
+            throw new Exception("ras_status tidak valid", 400);
+        }
+    }
+
+    // Cek eksistensi
+    $stmt = $conn->prepare("SELECT 1 FROM transmittals WHERE ta_id = ?");
+    $stmt->bind_param("s", $ta_id);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows === 0) {
+        throw new Exception("Transmittal tidak ditemukan", 404);
+    }
+    $stmt->close();
+
+    // Siapkan field untuk update
+    $fields = ['date', 'from_origin', 'document_type', 'attention', 'company', 'address', 'state', 'awb_reg', 'receiver_name', 'expeditur', 'receive_date', 'ras_status'];
+    $setParts = [];
+    $params = [];
+    $types = '';
+
+    foreach ($fields as $f) {
+        if (isset($input[$f])) {
+            $setParts[] = "$f = ?";
+            $params[] = $input[$f];
+            $types .= 's';
+        }
+    }
+
+    // Jika TIDAK ADA field data, cek apakah hanya ingin update status dokumen?
+    if (empty($setParts)) {
+        // Tapi minimal harus ada perubahan
+        throw new Exception("Tidak ada data untuk diperbarui", 400);
+    }
+
+    // Tambahkan updated_by
+    $setParts[] = "updated_by = ?";
+    $params[] = $currentName;
+    $types .= 's';
+
+    // Tambahkan ta_id untuk WHERE
+    $params[] = $ta_id;
+    $types .= 's';  // pastikan tidak kosong
+
+    $sql = "UPDATE transmittals SET " . implode(', ', $setParts) . " WHERE ta_id = ?";
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Gagal prepare update: " . $conn->error, 500);
+    }
+
+    // 🔴 PASTIKAN $types TIDAK KOSONG
+    if ($types === '') {
+        throw new Exception("Tidak ada parameter untuk bind", 500);
+    }
+
+    $stmt->bind_param($types, ...$params);
+    if (!$stmt->execute()) {
+        throw new Exception("Update gagal: " . $stmt->error, 500);
+    }
+    $stmt->close();
+
+    // Update dokumen
+    if (isset($input['doc_details'])) {
+        $delStmt = $conn->prepare("DELETE FROM transmittal_documents WHERE ta_id = ?");
+        $delStmt->bind_param("s", $ta_id);
+        if (!$delStmt->execute()) {
+            throw new Exception("Gagal hapus dokumen lama", 500);
+        }
+        $delStmt->close();
+
+        if (!empty($input['doc_details'])) {
+            $insStmt = $conn->prepare("INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) VALUES (?, ?, ?, ?, ?)");
+            if (!$insStmt) {
+                throw new Exception("Gagal prepare insert dokumen", 500);
+            }
+
+            foreach ($input['doc_details'] as $doc) {
+                if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
+
+                $insStmt->bind_param(
+                    "sisss",
+                    $ta_id,
+                    (int)$doc['no_urut'],
+                    $doc['doc_desc'],
+                    $doc['remarks'] ?? '',
+                    $currentName
+                );
+                if (!$insStmt->execute()) {
+                    throw new Exception("Gagal simpan dokumen: " . $insStmt->error, 500);
+                }
+            }
+            $insStmt->close();
+        }
+    }
+
+    $conn->commit();
+
+    http_response_code(200);
+    echo json_encode([
+        "status" => 200,
+        "message" => "Transmittal berhasil diperbarui"
+    ]);
+    exit;
+}
 
     // === DELETE ===
     if ($method === 'DELETE') {
