@@ -85,7 +85,7 @@ try {
                     $input['ta_id'],
                     (int)$doc['no_urut'],
                     $doc['doc_desc'],
-                    $doc['remarks'] ?? '',
+                    $doc['remarks'] ?? null,
                     $currentName
                 );
                 $docStmt->execute();
