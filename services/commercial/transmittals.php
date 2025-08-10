@@ -21,12 +21,12 @@ try {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $required = ['date', 'from_origin', 'document_type'];
+        $required = ['date', 'from_origin'];
         foreach ($required as $field) {
             if (empty($input[$field])) throw new Exception("Field $field wajib diisi", 400);
         }
 
-        $validStatus = ['Pending', 'Received', 'In Transit', 'Delivered'];
+        $validStatus = ['','Pending', 'Received', 'In Transit', 'Delivered'];
         if (!empty($input['ras_status']) && !in_array($input['ras_status'], $validStatus)) {
             throw new Exception("ras_status harus salah satu dari: " . implode(', ', $validStatus), 400);
         }
