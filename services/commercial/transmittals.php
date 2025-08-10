@@ -4,6 +4,7 @@ require 'db.php';
 require 'auth.php';
 
 $user = verifyToken();
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
@@ -12,21 +13,19 @@ try {
     }
 
     // Ambil parameter pagination
-    $page  = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-    $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 12;
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 12;
     $offset = ($page - 1) * $limit;
 
     $conn->autocommit(false);
 
     // Hitung total data
-    $countSql = "SELECT COUNT(*) AS total FROM transmittals_new";
-    $countResult = $conn->query($countSql);
+    $countResult = $conn->query("SELECT COUNT(*) as total FROM transmittals_new");
     if (!$countResult) throw new Exception("Count query failed: " . $conn->error);
-
-    $totalRows = $countResult->fetch_assoc()['total'] ?? 0;
+    $totalRows = $countResult->fetch_assoc()['total'];
     $totalPages = ceil($totalRows / $limit);
 
-    // Ambil data
+    // Ambil data sesuai pagination
     $sql = "SELECT ta_id, date, from_origin, document_type, company, ras_status
             FROM transmittals_new
             ORDER BY date DESC
@@ -42,7 +41,6 @@ try {
     $conn->commit();
 
     echo json_encode([
-        "status" => 200,
         "items" => $items,
         "totalPages" => $totalPages
     ]);
