@@ -69,57 +69,51 @@ try {
             break;
             
         case 'POST':
-            // CREATE operation
-            $input = json_decode(file_get_contents('php://input'), true);
-            
-            if (empty($input['date']) || empty($input['from_origin'])) {
-                throw new Exception("Date and From Origin are required", 400);
-            }
-            
-            // Generate TA ID
-            $prefix = "TA";
-            $lastId = $conn->query("SELECT MAX(ta_id) FROM transmittals_new WHERE ta_id LIKE '{$prefix}%'")->fetch_row()[0];
-            $nextNum = $lastId ? (int)substr($lastId, strlen($prefix)) + 1 : 2001;
-            $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-            
-            $stmt = $conn->prepare("
-                INSERT INTO transmittals_new (
-                    ta_id, date, from_origin, document_type, attention, company,
-                    address, state, awb_reg, expeditur, receiver_name, receive_date,
-                    ras_status, description, remarks, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            
-            $stmt->bind_param(
-                "ssssssssssssssss",
-                $ta_id,
-                $input['date'],
-                $input['from_origin'],
-                $input['document_type'] ?? null,
-                $input['attention'] ?? '',
-                $input['company'] ?? '',
-                $input['address'] ?? '',
-                $input['state'] ?? '',
-                $input['awb_reg'] ?? '',
-                $input['expeditur'] ?? '',
-                $input['receiver_name'] ?? null,
-                $input['receive_date'] ?? null,
-                $input['ras_status'] ?? 'Pending',
-                $input['description'] ?? '',
-                $input['remarks'] ?? '',
-                $user['name']
-            );
-            
-            if (!$stmt->execute()) {
-                throw new Exception("Failed to create transmittal: " . $stmt->error, 500);
-            }
-            
-            echo json_encode([
-                "status" => 201,
-                "message" => "Transmittal created successfully",
-                "ta_id" => $ta_id
-            ]);
-            break;
+    // CREATE operation
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (empty($input['ta_id']) || empty($input['date']) || empty($input['from_origin'])) {
+        throw new Exception("TA ID, Date and From Origin are required", 400);
+    }
+    
+    $stmt = $conn->prepare("
+        INSERT INTO transmittals_new (
+            ta_id, date, from_origin, document_type, attention, company,
+            address, state, awb_reg, expeditur, receiver_name, receive_date,
+            ras_status, description, remarks, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    
+    $stmt->bind_param(
+        "ssssssssssssssss",
+        $input['ta_id'],
+        $input['date'],
+        $input['from_origin'],
+        $input['document_type'] ?? null,
+        $input['attention'] ?? '',
+        $input['company'] ?? '',
+        $input['address'] ?? '',
+        $input['state'] ?? '',
+        $input['awb_reg'] ?? '',
+        $input['expeditur'] ?? '',
+        $input['receiver_name'] ?? null,
+        $input['receive_date'] ?? null,
+        $input['ras_status'] ?? 'Pending',
+        $input['description'] ?? '',
+        $input['remarks'] ?? '',
+        $user['name']
+    );
+    
+    if (!$stmt->execute()) {
+        throw new Exception("Failed to create transmittal: " . $stmt->error, 500);
+    }
+    
+    echo json_encode([
+        "status" => 201,
+        "message" => "Transmittal created successfully",
+        "ta_id" => $input['ta_id']
+    ]);
+    break;
             
         case 'PUT':
             // UPDATE operation
