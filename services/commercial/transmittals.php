@@ -1,11 +1,9 @@
 <?php
 header("Content-Type: application/json");
-require 'db.php';     
-require 'auth.php';     
+require 'db.php';
+require 'auth.php';
 
-// authorize(9, ["admin_asset"], [], null);
 $user = verifyToken();
-
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
@@ -13,18 +11,31 @@ try {
         throw new Exception("Method not allowed", 405);
     }
 
+    // Ambil parameter pagination
+    $page  = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $limit = isset($_GET['limit']) ? max(1, intval($_GET['limit'])) : 12;
+    $offset = ($page - 1) * $limit;
+
     $conn->autocommit(false);
 
-    $sql = "SELECT * FROM transmittals_new WHERE 1=1 ORDER BY date DESC";
+    // Hitung total data
+    $countSql = "SELECT COUNT(*) AS total FROM transmittals_new";
+    $countResult = $conn->query($countSql);
+    if (!$countResult) throw new Exception("Count query failed: " . $conn->error);
+
+    $totalRows = $countResult->fetch_assoc()['total'] ?? 0;
+    $totalPages = ceil($totalRows / $limit);
+
+    // Ambil data
+    $sql = "SELECT ta_id, date, from_origin, document_type, company, ras_status
+            FROM transmittals_new
+            ORDER BY date DESC
+            LIMIT $limit OFFSET $offset";
     $result = $conn->query($sql);
-    if (!$result) {
-        throw new Exception("Query failed: " . $conn->error, 500);
-    }
+    if (!$result) throw new Exception("Query failed: " . $conn->error);
 
     $items = [];
     while ($row = $result->fetch_assoc()) {
-        // Kalau doc_details isinya JSON, bisa decode
-        $row['doc_details'] = json_decode($row['doc_details'], true) ?: [];
         $items[] = $row;
     }
 
@@ -32,9 +43,9 @@ try {
 
     echo json_encode([
         "status" => 200,
-        "data" => $items
+        "items" => $items,
+        "totalPages" => $totalPages
     ]);
-
 } catch (Exception $e) {
     $conn->rollback();
     http_response_code($e->getCode() ?: 500);
