@@ -245,17 +245,19 @@ try {
 
         $conn->commit();
 
-        return [
-            "status" => 200,
-            "data" => [
-                "items" => $items,
-                "totalCount" => $total,
-                "page" => $page,
-                "limit" => $limit,
-                "totalPages" => ceil($total / $limit)
-            ]
-        ];
-    }
+    http_response_code(200);
+    echo json_encode([
+        "status" => 200,
+        "data" => [
+            "items" => $items,
+            "totalCount" => $total,
+            "page" => $page,
+            "limit" => $limit,
+            "totalPages" => ceil($total / $limit)
+        ]
+    ]);
+    exit;
+}
 
     throw new Exception("Method tidak diizinkan", 405);
 
