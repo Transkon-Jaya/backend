@@ -20,15 +20,12 @@ try {
 if ($method === 'POST' && !$ta_id) {
     try {
         $input = json_decode(file_get_contents("php://input"), true);
-        
-        // Debug: Log input received
         error_log("Input received: " . print_r($input, true));
-        
+
         if (!is_array($input)) {
             throw new Exception("Input harus berupa JSON valid", 400);
         }
 
-        // Validasi field wajib
         $required = ['date', 'from_origin'];
         foreach ($required as $field) {
             if (empty($input[$field])) {
@@ -40,12 +37,10 @@ if ($method === 'POST' && !$ta_id) {
         $prefix = "TRJA";
         $nextNum = 2000;
 
+        $searchPattern = $prefix . "%";
         $stmt = $conn->prepare("SELECT MAX(ta_id) FROM transmittals WHERE ta_id LIKE ?");
-        $stmt->bind_param("s", $prefix."%");
-        if (!$stmt->execute()) {
-            throw new Exception("Gagal query TA ID terakhir: " . $stmt->error, 500);
-        }
-        
+        $stmt->bind_param("s", $searchPattern);
+        $stmt->execute();
         $result = $stmt->get_result();
         $row = $result->fetch_row();
         $lastId = $row[0] ?? null;
@@ -55,17 +50,78 @@ if ($method === 'POST' && !$ta_id) {
             $nextNum = (int)$matches[1] + 1;
         }
 
-        $input['ta_id'] = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+        error_log("Generated TA_ID: " . $ta_id);
 
-        // Debug: Log generated TA_ID
-        error_log("Generated TA_ID: " . $input['ta_id']);
+        // Insert transmittal
+        $stmt = $conn->prepare("
+            INSERT INTO transmittals (
+                ta_id, date, from_origin, document_type, attention, company, 
+                address, state, awb_reg, expeditur, receiver_name, receive_date, 
+                ras_status, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param(
+            "ssssssssssssss",
+            $ta_id,
+            $input['date'],
+            $input['from_origin'],
+            $input['document_type'] ?? null,
+            $input['attention'] ?? '',
+            $input['company'] ?? '',
+            $input['address'] ?? '',
+            $input['state'] ?? '',
+            $input['awb_reg'] ?? '',
+            $input['expeditur'] ?? '',
+            $input['receiver_name'] ?? null,
+            $input['receive_date'] ?? null,
+            $input['ras_status'] ?? 'Pending',
+            $currentName
+        );
 
-        // ... [rest of your code]
+        if (!$stmt->execute()) {
+            throw new Exception("Gagal menyimpan transmittal: " . $stmt->error, 500);
+        }
+        $stmt->close();
+
+        // Insert doc_details jika ada
+        if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
+            $insStmt = $conn->prepare("
+                INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) 
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            foreach ($input['doc_details'] as $doc) {
+                if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
+                $insStmt->bind_param(
+                    "sisss",
+                    $ta_id,
+                    (int)$doc['no_urut'],
+                    $doc['doc_desc'],
+                    $doc['remarks'] ?? '',
+                    $currentName
+                );
+                if (!$insStmt->execute()) {
+                    error_log("Gagal simpan dokumen: " . $insStmt->error);
+                }
+            }
+            $insStmt->close();
+        }
+
+        $conn->commit();
+
+        echo json_encode([
+            "status" => 200,
+            "message" => "Transmittal berhasil dibuat",
+            "data" => ["ta_id" => $ta_id]
+        ]);
+        exit;
 
     } catch (Exception $e) {
-        // Debug: Log the full error
         error_log("Error in CREATE: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-        throw $e; // Re-throw untuk ditangkap oleh handler utama
+        $conn->rollback();
+        http_response_code($e->getCode() ?: 500);
+        echo json_encode(["error" => $e->getMessage()]);
+        exit;
     }
 }
     // === UPDATE ===
