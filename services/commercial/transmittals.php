@@ -26,8 +26,7 @@ try {
                 }
                 
                 $data = $result->fetch_assoc();
-                // Jika ingin tetap mengembalikan JSON kosong untuk kompatibilitas frontend
-                // hapus jika tidak butuh
+                
                 echo json_encode([
                     "status" => 200,
                     "data" => $data
@@ -45,7 +44,8 @@ try {
                 
                 // Get paginated data
                 $stmt = $conn->prepare("
-                    SELECT ta_id, date, from_origin, document_type, company, ras_status 
+                    SELECT ta_id, date, from_origin, document_type, company, ras_status, 
+                           description, remarks
                     FROM transmittals_new 
                     ORDER BY date DESC 
                     LIMIT ? OFFSET ?
@@ -213,4 +213,3 @@ try {
 } finally {
     $conn->close();
 }
-?>
