@@ -33,24 +33,29 @@ try {
             throw new Exception("ras_status harus salah satu dari: " . implode(', ', $validStatus), 400);
         }
 
-        // Auto-generate TA ID
-        if (empty($input['ta_id'])) {
-            $prefix = "TRJA";
-            $stmt = $conn->prepare("SELECT MAX(ta_id) as last_id FROM transmittals WHERE ta_id LIKE ?");
-            $pattern = $prefix . "%";
-            $stmt->bind_param("s", $pattern);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $row = $result->fetch_assoc();
-            $lastId = $row['last_id'] ?? null;
+       // Auto-generate TA ID
+if (empty(trim($input['ta_id']))) {
+    $prefix = "TRJA";
+    $nextNum = 2000; // default
 
-            if ($lastId && preg_match('/^TRJA(\d+)$/', $lastId, $matches)) {
-                $nextNum = (int)$matches[1] + 1;
-            } else {
-                $nextNum = 2000;
-            }
-            $input['ta_id'] = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+    $stmt = $conn->prepare("SELECT MAX(ta_id) FROM transmittals WHERE ta_id LIKE ?");
+    if ($stmt) {
+        $likePattern = $prefix . '%';
+        $stmt->bind_param("s", $likePattern);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_row();
+        $lastId = $row[0] ?? null;
+
+        if ($lastId && preg_match('/^TRJA(\d+)$/', $lastId, $matches)) {
+            $nextNum = (int)$matches[1] + 1;
         }
+    }
+    // Jika gagal query, tetap pakai TRJA002000
+    $input['ta_id'] = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+} else {
+    $input['ta_id'] = trim($input['ta_id']);
+}
 
         // Cek duplikat TA ID
         $stmt = $conn->prepare("SELECT 1 FROM transmittals WHERE ta_id = ?");
