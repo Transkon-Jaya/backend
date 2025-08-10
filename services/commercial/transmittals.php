@@ -93,11 +93,13 @@ try {
         }
 
         $conn->commit();
-        return [
-            "status" => 201,
-            "message" => "Transmittal berhasil dibuat",
-            "ta_id" => $input['ta_id']
-        ];
+        http_response_code(201);
+echo json_encode([
+    "status" => 201,
+    "message" => "Transmittal berhasil dibuat",
+    "ta_id" => $input['ta_id']
+]);
+exit;
     }
 
     // === UPDATE ===
