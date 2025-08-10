@@ -98,7 +98,7 @@ try {
         $input['expeditur'] ?? '',
         $input['receiver_name'] ?? null,
         $input['receive_date'] ?? null,
-        $input['ras_status'] ?? 'Pending',
+        $input['ras_status'] ?? null,
         $input['description'] ?? '',
         $input['remarks'] ?? '',
         $user['name']
