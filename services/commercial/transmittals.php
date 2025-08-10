@@ -60,16 +60,16 @@ try {
             $input['ta_id'],
             $input['date'],
             $input['from_origin'],
-            $input['document_type'],
+            $input['document_type'] ?? null,
             $input['attention'] ?? '',
             $input['company'] ?? '',
             $input['address'] ?? '',
             $input['state'] ?? '',
             $input['awb_reg'] ?? '',
             $input['expeditur'] ?? '',
-            $input['receiver_name'] ?? '',
-            $input['receive_date'] ?? '',
-            $input['ras_status'] ?? 'Pending',
+            $input['receiver_name'] ?? null,
+            $input['receive_date'] ?? null,
+            $input['ras_status'] ?? null,
             $currentName
         );
         $stmt->execute();
