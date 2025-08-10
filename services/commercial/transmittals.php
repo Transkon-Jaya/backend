@@ -17,106 +17,125 @@ try {
     $conn->begin_transaction();
 
     // === CREATE ===
-    if ($method === 'POST' && !$ta_id) {
-        $input = json_decode(file_get_contents("php://input"), true);
-        if (!is_array($input)) throw new Exception("Input tidak valid", 400);
+    // === CREATE ===
+if ($method === 'POST' && !$ta_id) {
+    $input = json_decode(file_get_contents("php://input"), true);
+    if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
-        $required = ['date', 'from_origin'];
-        foreach ($required as $field) {
-            if (empty(trim($input[$field] ?? ''))) {
-                throw new Exception("Field $field wajib diisi", 400);
+    $required = ['date', 'from_origin'];
+    foreach ($required as $field) {
+        if (empty(trim($input[$field] ?? ''))) {
+            throw new Exception("Field $field wajib diisi", 400);
+        }
+    }
+
+    $validStatus = ['', 'Pending', 'Received', 'In Transit', 'Delivered'];
+    if (!empty($input['ras_status']) && !in_array($input['ras_status'], $validStatus)) {
+        throw new Exception("ras_status harus salah satu dari: " . implode(', ', $validStatus), 400);
+    }
+
+    // Auto-generate TA ID
+    if (empty(trim($input['ta_id']))) {
+        $prefix = "TRJA";
+        $nextNum = 2000;
+
+        $stmt = $conn->prepare("SELECT MAX(ta_id) FROM transmittals WHERE ta_id LIKE ?");
+        if ($stmt) {
+            $pattern = $prefix . '%';
+            $stmt->bind_param("s", $pattern);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_row();
+            $lastId = $row[0] ?? null;
+
+            if ($lastId && preg_match('/^TRJA(\d+)$/', $lastId, $matches)) {
+                $nextNum = (int)$matches[1] + 1;
             }
         }
 
-        $validStatus = ['', 'Pending', 'Received', 'In Transit', 'Delivered'];
-        if (!empty($input['ras_status']) && !in_array($input['ras_status'], $validStatus)) {
-            throw new Exception("ras_status harus salah satu dari: " . implode(', ', $validStatus), 400);
+        $input['ta_id'] = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
+    }
+
+    // Validasi akhir
+    if (empty($input['ta_id'])) {
+        throw new Exception("TA ID tidak boleh kosong", 500);
+    }
+
+    // Cek duplikat
+    $stmt = $conn->prepare("SELECT 1 FROM transmittals WHERE ta_id = ?");
+    $stmt->bind_param("s", $input['ta_id']);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        throw new Exception("TA ID sudah ada: " . $input['ta_id'], 400);
+    }
+
+    // INSERT transmittal
+    $sql = "INSERT INTO transmittals (
+        ta_id, date, from_origin, document_type, attention, 
+        company, address, state, awb_reg, expeditur, receiver_name, receive_date, ras_status, created_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception("Gagal prepare query: " . $conn->error, 500);
+    }
+
+    $stmt->bind_param(
+        "ssssssssssssss",
+        $input['ta_id'],
+        $input['date'],
+        $input['from_origin'],
+        $input['document_type'] ?? null,
+        $input['attention'] ?? '',
+        $input['company'] ?? '',
+        $input['address'] ?? '',
+        $input['state'] ?? '',
+        $input['awb_reg'] ?? '',
+        $input['expeditur'] ?? '',
+        $input['receiver_name'] ?? null,
+        $input['receive_date'] ?? null,
+        $input['ras_status'] ?? null,
+        $currentName
+    );
+
+    if (!$stmt->execute()) {
+        throw new Exception("Gagal simpan: " . $stmt->error, 500);
+    }
+
+    // Insert dokumen
+    if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
+        $docStmt = $conn->prepare("INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) VALUES (?, ?, ?, ?, ?)");
+        if (!$docStmt) {
+            throw new Exception("Gagal prepare dokumen: " . $conn->error, 500);
         }
 
-       // Auto-generate TA ID
-if (empty(trim($input['ta_id']))) {
-    $prefix = "TRJA";
-    $nextNum = 2000; // default
+        foreach ($input['doc_details'] as $doc) {
+            if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
 
-    $stmt = $conn->prepare("SELECT MAX(ta_id) FROM transmittals WHERE ta_id LIKE ?");
-    if ($stmt) {
-        $likePattern = $prefix . '%';
-        $stmt->bind_param("s", $likePattern);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_row();
-        $lastId = $row[0] ?? null;
-
-        if ($lastId && preg_match('/^TRJA(\d+)$/', $lastId, $matches)) {
-            $nextNum = (int)$matches[1] + 1;
+            $docStmt->bind_param(
+                "sisss",
+                $input['ta_id'],
+                (int)$doc['no_urut'],
+                $doc['doc_desc'],
+                $doc['remarks'] ?? null,
+                $currentName
+            );
+            if (!$docStmt->execute()) {
+                throw new Exception("Gagal simpan dokumen: " . $docStmt->error, 500);
+            }
         }
     }
-    // Jika gagal query, tetap pakai TRJA002000
-    $input['ta_id'] = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-} else {
-    $input['ta_id'] = trim($input['ta_id']);
+
+    $conn->commit();
+
+    http_response_code(201);
+    echo json_encode([
+        "status" => 201,
+        "message" => "Transmittal berhasil dibuat",
+        "ta_id" => $input['ta_id']
+    ]);
+    exit;
 }
-
-        // Cek duplikat TA ID
-        $stmt = $conn->prepare("SELECT 1 FROM transmittals WHERE ta_id = ?");
-        $stmt->bind_param("s", $input['ta_id']);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows > 0) {
-            throw new Exception("TA ID sudah ada: " . $input['ta_id'], 400);
-        }
-
-        $sql = "INSERT INTO transmittals (
-            ta_id, date, from_origin, document_type, attention, 
-            company, address, state, awb_reg, expeditur, receiver_name, receive_date, ras_status, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param(
-            "ssssssssssssss",
-            $input['ta_id'],
-            $input['date'],
-            $input['from_origin'],
-            $input['document_type'] ?? null,
-            $input['attention'] ?? '',
-            $input['company'] ?? '',
-            $input['address'] ?? '',
-            $input['state'] ?? '',
-            $input['awb_reg'] ?? '',
-            $input['expeditur'] ?? '',
-            $input['receiver_name'] ?? null,
-            $input['receive_date'] ?? null,
-            $input['ras_status'] ?? null,
-            $currentName
-        );
-        $stmt->execute();
-
-        // Insert dokumen
-        if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
-            $docSql = "INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) VALUES (?, ?, ?, ?, ?)";
-            $docStmt = $conn->prepare($docSql);
-            foreach ($input['doc_details'] as $doc) {
-                if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
-                $docStmt->bind_param(
-                    "sisss",
-                    $input['ta_id'],
-                    (int)$doc['no_urut'],
-                    $doc['doc_desc'],
-                    $doc['remarks'] ?? null,
-                    $currentName
-                );
-                $docStmt->execute();
-            }
-        }
-
-        $conn->commit();
-        echo json_encode([
-            "status" => 201,
-            "message" => "Transmittal berhasil dibuat",
-            "ta_id" => $input['ta_id']
-        ]);
-        exit;
-    }
-
     // === UPDATE ===
     if ($method === 'PUT') {
         if (!$ta_id) throw new Exception("TA ID tidak diberikan", 400);
