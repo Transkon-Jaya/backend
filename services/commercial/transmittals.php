@@ -262,10 +262,13 @@ try {
     throw new Exception("Method tidak diizinkan", 405);
 
 } catch (Exception $e) {
-    $conn->rollback();
+    if ($conn && $conn->connect_errno === 0) {
+        $conn->rollback();
+    }
     http_response_code($e->getCode() ?: 500);
-    return [
+    echo json_encode([
         "error" => $e->getMessage(),
         "trace" => $e->getTraceAsString()
-    ];
+    ]);
+    exit;
 }
