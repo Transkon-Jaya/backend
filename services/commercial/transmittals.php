@@ -10,6 +10,64 @@ try {
     $conn->autocommit(false);
 
     switch ($method) {
+        case 'GET':
+            // READ operation
+            $ta_id = $_GET['ta_id'] ?? null;
+            
+            if ($ta_id) {
+                // Get single transmittal
+                $stmt = $conn->prepare("SELECT * FROM transmittals_new WHERE ta_id = ?");
+                $stmt->bind_param("s", $ta_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows === 0) {
+                    throw new Exception("Transmittal not found", 404);
+                }
+                
+                $data = $result->fetch_assoc();
+                
+                echo json_encode([
+                    "status" => 200,
+                    "data" => $data
+                ]);
+            } else {
+                // List transmittals with pagination
+                $page = max(1, (int)($_GET['page'] ?? 1));
+                $limit = min(50, max(10, (int)($_GET['limit'] ?? 10)));
+                $offset = ($page - 1) * $limit;
+                
+                // Count total
+                $countStmt = $conn->query("SELECT COUNT(*) as total FROM transmittals_new");
+                $total = $countStmt->fetch_assoc()['total'];
+                $totalPages = ceil($total / $limit);
+                
+                // Get paginated data
+                $stmt = $conn->prepare("
+                    SELECT ta_id, date, from_origin, document_type, company, ras_status, 
+                           description, remarks
+                    FROM transmittals_new 
+                    ORDER BY date DESC 
+                    LIMIT ? OFFSET ?
+                ");
+                $stmt->bind_param("ii", $limit, $offset);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                
+                $items = [];
+                while ($row = $result->fetch_assoc()) {
+                    $items[] = $row;
+                }
+                
+                echo json_encode([
+                    "status" => 200,
+                    "items" => $items,
+                    "totalPages" => $totalPages,
+                    "totalCount" => $total
+                ]);
+            }
+            break;
+            
         case 'POST':
             // CREATE operation
             $input = json_decode(file_get_contents('php://input'), true);
@@ -19,13 +77,10 @@ try {
             }
             
             // Generate TA ID
-            $prefix = "TRJA";
+            $prefix = "TA";
             $lastId = $conn->query("SELECT MAX(ta_id) FROM transmittals_new WHERE ta_id LIKE '{$prefix}%'")->fetch_row()[0];
             $nextNum = $lastId ? (int)substr($lastId, strlen($prefix)) + 1 : 2001;
             $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-            
-            // Handle NULL dates
-            $receive_date = (!empty($input['receive_date'])) ? $input['receive_date'] : null;
             
             $stmt = $conn->prepare("
                 INSERT INTO transmittals_new (
@@ -48,7 +103,7 @@ try {
                 $input['awb_reg'] ?? '',
                 $input['expeditur'] ?? '',
                 $input['receiver_name'] ?? null,
-                $receive_date, // Use the processed date value
+                $input['receive_date'] ?? null,
                 $input['ras_status'] ?? 'Pending',
                 $input['description'] ?? '',
                 $input['remarks'] ?? '',
@@ -81,9 +136,6 @@ try {
                 throw new Exception("Transmittal not found", 404);
             }
             
-            // Handle NULL dates
-            $receive_date = (!empty($input['receive_date'])) ? $input['receive_date'] : null;
-            
             // Build update query
             $fields = [];
             $params = [];
@@ -98,8 +150,7 @@ try {
             foreach ($updatableFields as $field) {
                 if (array_key_exists($field, $input)) {
                     $fields[] = "$field = ?";
-                    // Special handling for receive_date
-                    $params[] = ($field === 'receive_date') ? $receive_date : $input[$field];
+                    $params[] = $input[$field];
                     $types .= 's';
                 }
             }
@@ -125,7 +176,30 @@ try {
             ]);
             break;
             
-        // ... [rest of your code remains the same]
+        case 'DELETE':
+            // DELETE operation
+            $ta_id = $_GET['ta_id'] ?? null;
+            if (!$ta_id) throw new Exception("TA ID is required", 400);
+            
+            $stmt = $conn->prepare("DELETE FROM transmittals_new WHERE ta_id = ?");
+            $stmt->bind_param("s", $ta_id);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to delete transmittal: " . $stmt->error, 500);
+            }
+            
+            if ($stmt->affected_rows === 0) {
+                throw new Exception("Transmittal not found", 404);
+            }
+            
+            echo json_encode([
+                "status" => 200,
+                "message" => "Transmittal deleted successfully"
+            ]);
+            break;
+            
+        default:
+            throw new Exception("Method not allowed", 405);
     }
     
     $conn->commit();
