@@ -201,47 +201,47 @@ try {
         }
         $stmt->close();
 
-        // Siapkan field untuk update
-        $fields = ['date', 'from_origin', 'document_type', 'attention', 'company', 'address', 'state', 'awb_reg', 'receiver_name', 'expeditur', 'receive_date', 'ras_status'];
-        $setParts = [];
-        $params = [];
-        $types = '';
+       // Siapkan field untuk update
+$fields = ['date', 'from_origin', 'document_type', 'attention', 'company', 'address', 'state', 'awb_reg', 'receiver_name', 'expeditur', 'receive_date', 'ras_status'];
+$setParts = [];
+$params = [];
+$types = '';
 
-        foreach ($fields as $f) {
-            if (isset($input[$f])) {
-                $setParts[] = "$f = ?";
-                $params[] = $input[$f];
-                $types .= 's';
-            }
-        }
-
-        // Jika tidak ada field data, lempar error
-        if (empty($setParts)) {
-            throw new Exception("Tidak ada data untuk diperbarui", 400);
-        }
-
-        // Tambahkan updated_by
-        $setParts[] = "updated_by = ?";
-        $params[] = $currentName;
+foreach ($fields as $f) {
+    if (isset($input[$f])) {
+        $setParts[] = "$f = ?";
+        $params[] = $input[$f];
         $types .= 's';
+    }
+}
 
-        // Tambahkan ta_id untuk WHERE
-        $params[] = $ta_id;
-        $types .= 's'; // tipe untuk ta_id
+// Jika tidak ada field data, lempar error
+if (empty($setParts)) {
+    throw new Exception("Tidak ada data untuk diperbarui", 400);
+}
 
-        // 🔒 PASTIKAN $types TIDAK KOSONG
-        if ($types === '') {
-            throw new Exception("String tipe bind_param kosong — tidak ada parameter", 500);
-        }
+// Tambahkan updated_by
+$setParts[] = "updated_by = ?";
+$params[] = $currentName;
+$types .= 's';
 
-        $sql = "UPDATE transmittals SET " . implode(', ', $setParts) . " WHERE ta_id = ?";
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Gagal prepare update: " . $conn->error, 500);
-        }
+// Tambahkan ta_id untuk WHERE
+$params[] = $ta_id;
+$types .= 's'; // tipe untuk ta_id
 
-        // 🔹 Bind dengan aman
-        $stmt->bind_param($types, ...$params);
+$sql = "UPDATE transmittals SET " . implode(', ', $setParts) . " WHERE ta_id = ?";
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    throw new Exception("Gagal prepare update: " . $conn->error, 500);
+}
+
+// Debugging: log the parameters before binding
+error_log("Types: " . $types);
+error_log("Params count: " . count($params));
+error_log("SQL: " . $sql);
+
+// 🔹 Bind dengan aman
+$stmt->bind_param($types, ...$params);
 
         if (!$stmt->execute()) {
             throw new Exception("Update gagal: " . $stmt->error, 500);
