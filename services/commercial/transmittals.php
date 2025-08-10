@@ -3,33 +3,35 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/error.log');
+ini_set('error_log', __DIR__ . '/transmittal_error.log');
 
 header("Content-Type: application/json");
 
-require_once 'db.php'; // Harus return $conn
-require_once 'auth.php'; // Harus return authorize()
+// --- Include file penting ---
+require_once 'db.php';     // Harus return $conn
+require_once 'auth.php';   // Harus return authorize()
 
 try {
     $currentUser = authorize();
     $currentName = $currentUser['name'] ?? 'system';
     $method = $_SERVER['REQUEST_METHOD'];
 
+    // Mulai transaksi
     $conn->begin_transaction();
 
-    // === POST: Create New Transmittal ===
+    // === POST: Tambah Data Baru ===
     if ($method === 'POST') {
         $input = json_decode(file_get_contents("php://input"), true);
 
         if (!is_array($input)) {
-            throw new Exception("Invalid JSON input", 400);
+            throw new Exception("Input harus berupa JSON valid", 400);
         }
 
         if (empty($input['date']) || empty($input['from_origin'])) {
-            throw new Exception("Date and From Origin are required", 400);
+            throw new Exception("Date dan From Origin wajib diisi", 400);
         }
 
-        // Generate TA ID: TRJA000201
+        // Auto-generate TA ID: TRJA000201
         $prefix = "TRJA";
         $searchPattern = $prefix . "%";
 
@@ -47,9 +49,10 @@ try {
         }
         $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
 
-        // Simpan doc_details sebagai JSON
+        // Konversi doc_details ke JSON
         $docDetails = isset($input['doc_details']) ? json_encode($input['doc_details']) : '[]';
 
+        // Insert ke database
         $stmt = $conn->prepare("
             INSERT INTO transmittals_new (
                 ta_id, date, from_origin, document_type, attention, company,
@@ -78,7 +81,7 @@ try {
         );
 
         if (!$stmt->execute()) {
-            throw new Exception("Insert failed: " . $stmt->error, 500);
+            throw new Exception("Gagal menyimpan data: " . $stmt->error, 500);
         }
         $stmt->close();
 
@@ -86,13 +89,15 @@ try {
 
         echo json_encode([
             "status" => 200,
-            "message" => "Transmittal created successfully",
-            "data" => ["ta_id" => $ta_id]
+            "message" => "Transmittal berhasil dibuat",
+            "data" => [
+                "ta_id" => $ta_id
+            ]
         ]);
         exit;
     }
 
-    // === GET: List or Single ===
+    // === GET: Ambil Data (List atau Detail) ===
     if ($method === 'GET') {
         $ta_id = $_GET['ta_id'] ?? null;
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -100,8 +105,8 @@ try {
         $search = $_GET['search'] ?? null;
         $status = $_GET['status'] ?? null;
 
+        // Jika ada ta_id → ambil satu data
         if ($ta_id) {
-            // Get single
             $stmt = $conn->prepare("SELECT * FROM transmittals_new WHERE ta_id = ?");
             $stmt->bind_param("s", $ta_id);
             $stmt->execute();
@@ -109,7 +114,7 @@ try {
             $row = $result->fetch_assoc();
 
             if (!$row) {
-                throw new Exception("Transmittal not found", 404);
+                throw new Exception("Data tidak ditemukan", 404);
             }
 
             // Parse JSON
@@ -117,108 +122,115 @@ try {
             $row['document_count'] = count($row['doc_details']);
 
             $conn->commit();
-            echo json_encode(["status" => 200, "data" => $row]);
-            exit;
-        } else {
-            // Get list
-            $sql = "SELECT * FROM transmittals_new WHERE 1=1";
-            $params = [];
-            $types = '';
-
-            if ($search) {
-                $term = "%$search%";
-                $sql .= " AND (ta_id LIKE ? OR from_origin LIKE ? OR company LIKE ?)";
-                array_push($params, $term, $term, $term);
-                $types .= 'sss';
-            }
-            if ($status) {
-                $sql .= " AND ras_status = ?";
-                $params[] = $status;
-                $types .= 's';
-            }
-
-            $sql .= " ORDER BY date DESC LIMIT ? OFFSET ?";
-            $params[] = $limit;
-            $params[] = ($page - 1) * $limit;
-            $types .= 'ii';
-
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param($types, ...$params);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $items = $result->fetch_all(MYSQLI_ASSOC);
-
-            // Hitung total
-            $countSql = "SELECT COUNT(*) as total FROM transmittals_new WHERE 1=1";
-            $countParams = [];
-            $countTypes = '';
-            if ($search) {
-                $term = "%$search%";
-                $countSql .= " AND (ta_id LIKE ? OR from_origin LIKE ? OR company LIKE ?)";
-                $countParams = [$term, $term, $term];
-                $countTypes = 'sss';
-            }
-            if ($status) {
-                $countSql .= " AND ras_status = ?";
-                $countParams[] = $status;
-                $countTypes .= 's';
-            }
-
-            $countStmt = $conn->prepare($countSql);
-            if ($countTypes) $countStmt->bind_param($countTypes, ...$countParams);
-            $countStmt->execute();
-            $total = (int)$countStmt->get_result()->fetch_assoc()['total'];
-
-            // Parse doc_details
-            foreach ($items as &$item) {
-                $item['doc_details'] = json_decode($item['doc_details'], true) ?: [];
-                $item['document_count'] = count($item['doc_details']);
-            }
-
-            $conn->commit();
 
             echo json_encode([
                 "status" => 200,
-                "data" => [
-                    "items" => $items,
-                    "totalCount" => $total,
-                    "page" => $page,
-                    "limit" => $limit,
-                    "totalPages" => ceil($total / $limit)
-                ]
+                "data" => $row
             ]);
             exit;
         }
+
+        // Ambil list
+        $sql = "SELECT * FROM transmittals_new WHERE 1=1";
+        $params = [];
+        $types = '';
+
+        if ($search) {
+            $term = "%$search%";
+            $sql .= " AND (ta_id LIKE ? OR from_origin LIKE ? OR company LIKE ?)";
+            array_push($params, $term, $term, $term);
+            $types .= 'sss';
+        }
+        if ($status) {
+            $sql .= " AND ras_status = ?";
+            $params[] = $status;
+            $types .= 's';
+        }
+
+        $sql .= " ORDER BY date DESC LIMIT ? OFFSET ?";
+        $params[] = $limit;
+        $params[] = ($page - 1) * $limit;
+        $types .= 'ii';
+
+        $stmt = $conn->prepare($sql);
+        if ($types) $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $items = $result->fetch_all(MYSQLI_ASSOC);
+
+        // Hitung total data
+        $countSql = "SELECT COUNT(*) as total FROM transmittals_new WHERE 1=1";
+        $countParams = [];
+        $countTypes = '';
+        if ($search) {
+            $term = "%$search%";
+            $countSql .= " AND (ta_id LIKE ? OR from_origin LIKE ? OR company LIKE ?)";
+            $countParams = [$term, $term, $term];
+            $countTypes = 'sss';
+        }
+        if ($status) {
+            $countSql .= " AND ras_status = ?";
+            $countParams[] = $status;
+            $countTypes .= 's';
+        }
+
+        $countStmt = $conn->prepare($countSql);
+        if ($countTypes) $countStmt->bind_param($countTypes, ...$countParams);
+        $countStmt->execute();
+        $total = (int)$countStmt->get_result()->fetch_assoc()['total'];
+
+        // Parse JSON doc_details
+        foreach ($items as &$item) {
+            $item['doc_details'] = json_decode($item['doc_details'], true) ?: [];
+            $item['document_count'] = count($item['doc_details']);
+        }
+
+        $conn->commit();
+
+        echo json_encode([
+            "status" => 200,
+            "data" => [
+                "items" => $items,
+                "totalCount" => $total,
+                "page" => $page,
+                "limit" => $limit,
+                "totalPages" => ceil($total / $limit)
+            ]
+        ]);
+        exit;
     }
 
-    // === PUT: Update ===
+    // === PUT: Update Data ===
     if ($method === 'PUT') {
         $ta_id = $_GET['ta_id'] ?? null;
-        if (!$ta_id) throw new Exception("TA ID required", 400);
+        if (!$ta_id) throw new Exception("TA ID tidak diberikan", 400);
 
         $input = json_decode(file_get_contents("php://input"), true);
-        if (!is_array($input)) throw new Exception("Invalid input", 400);
+        if (!is_array($input)) throw new Exception("Input tidak valid", 400);
 
+        // Cek eksistensi
         $stmt = $conn->prepare("SELECT 1 FROM transmittals_new WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
         if ($stmt->get_result()->num_rows === 0) {
-            throw new Exception("Not found", 404);
+            throw new Exception("Data tidak ditemukan", 404);
         }
 
-        $fields = ['date', 'from_origin', 'document_type', 'attention', 'company', 'address', 'state', 'awb_reg', 'expeditur', 'receiver_name', 'receive_date', 'ras_status'];
+        // Siapkan field untuk update
         $setParts = [];
         $params = [];
         $types = '';
 
-        foreach ($fields as $f) {
-            if (isset($input[$f])) {
-                $setParts[] = "$f = ?";
-                $params[] = $input[$f];
+        $fields = ['date', 'from_origin', 'document_type', 'attention', 'company', 'address', 'state', 'awb_reg', 'expeditur', 'receiver_name', 'receive_date', 'ras_status'];
+        foreach ($fields as $field) {
+            if (isset($input[$field])) {
+                $setParts[] = "$field = ?";
+                $params[] = $input[$field];
                 $types .= 's';
             }
         }
 
+        // Update doc_details jika ada
         if (isset($input['doc_details'])) {
             $setParts[] = "doc_details = ?";
             $params[] = json_encode($input['doc_details']);
@@ -229,39 +241,54 @@ try {
         $params[] = $ta_id;
         $types .= 's';
 
+        if (empty($setParts)) {
+            throw new Exception("Tidak ada data untuk diperbarui", 400);
+        }
+
         $sql = "UPDATE transmittals_new SET " . implode(', ', $setParts) . " WHERE ta_id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
 
         $conn->commit();
-        echo json_encode(["status" => 200, "message" => "Updated"]);
+
+        echo json_encode([
+            "status" => 200,
+            "message" => "Data berhasil diperbarui"
+        ]);
         exit;
     }
 
-    // === DELETE ===
+    // === DELETE: Hapus Data ===
     if ($method === 'DELETE') {
         $ta_id = $_GET['ta_id'] ?? null;
-        if (!$ta_id) throw new Exception("TA ID required", 400);
+        if (!$ta_id) throw new Exception("TA ID tidak diberikan", 400);
 
         $stmt = $conn->prepare("DELETE FROM transmittals_new WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
 
         if ($stmt->affected_rows === 0) {
-            throw new Exception("Not found", 404);
+            throw new Exception("Data tidak ditemukan", 404);
         }
 
         $conn->commit();
-        echo json_encode(["status" => 200, "message" => "Deleted"]);
+
+        echo json_encode([
+            "status" => 200,
+            "message" => "Data berhasil dihapus"
+        ]);
         exit;
     }
 
-    throw new Exception("Method not allowed", 405);
+    // Method tidak diizinkan
+    throw new Exception("Method tidak didukung", 405);
 
 } catch (Exception $e) {
     $conn->rollback();
-    http_response_code($e->getCode() ?: 500);
+    $code = $e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 500;
+    http_response_code($code);
+    error_log("Transmittal API Error: " . $e->getMessage());
     echo json_encode(["error" => $e->getMessage()]);
     exit;
 }
