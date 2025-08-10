@@ -18,20 +18,28 @@ try {
 
    // === CREATE ===
 if ($method === 'POST' && !$ta_id) {
+    error_log("=== START POST /transmittal ===");
     try {
         $input = json_decode(file_get_contents("php://input"), true);
         error_log("Input received: " . print_r($input, true));
 
         if (!is_array($input)) {
-            throw new Exception("Input harus berupa JSON valid", 400);
+            throw new Exception("Input harus JSON valid", 400);
         }
 
-        $required = ['date', 'from_origin'];
-        foreach ($required as $field) {
-            if (empty($input[$field])) {
-                throw new Exception("Field $field wajib diisi", 400);
-            }
+        if (empty($input['date']) || empty($input['from_origin'])) {
+            throw new Exception("Date dan From Origin wajib diisi", 400);
         }
+
+        error_log("Validasi awal berhasil");
+
+        // Cek koneksi database
+        if (!$conn) {
+            throw new Exception("Koneksi database tidak tersedia", 500);
+        }
+
+        $conn->begin_transaction();
+        error_log("Transaksi dimulai");
 
         // Auto-generate TA ID
         $prefix = "TRJA";
@@ -39,6 +47,9 @@ if ($method === 'POST' && !$ta_id) {
 
         $searchPattern = $prefix . "%";
         $stmt = $conn->prepare("SELECT MAX(ta_id) FROM transmittals WHERE ta_id LIKE ?");
+        if (!$stmt) {
+            throw new Exception("Prepare gagal: " . $conn->error, 500);
+        }
         $stmt->bind_param("s", $searchPattern);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -51,9 +62,9 @@ if ($method === 'POST' && !$ta_id) {
         }
 
         $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
-        error_log("Generated TA_ID: " . $ta_id);
+        error_log("Generated TA ID: " . $ta_id);
 
-        // Insert transmittal
+        // INSERT ke transmittals
         $stmt = $conn->prepare("
             INSERT INTO transmittals (
                 ta_id, date, from_origin, document_type, attention, company, 
@@ -61,6 +72,11 @@ if ($method === 'POST' && !$ta_id) {
                 ras_status, created_by
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
+
+        if (!$stmt) {
+            throw new Exception("Prepare INSERT gagal: " . $conn->error, 500);
+        }
+
         $stmt->bind_param(
             "ssssssssssssss",
             $ta_id,
@@ -80,16 +96,20 @@ if ($method === 'POST' && !$ta_id) {
         );
 
         if (!$stmt->execute()) {
-            throw new Exception("Gagal menyimpan transmittal: " . $stmt->error, 500);
+            throw new Exception("Execute INSERT gagal: " . $stmt->error, 500);
         }
         $stmt->close();
 
-        // Insert doc_details jika ada
+        // Simpan doc_details
         if (!empty($input['doc_details']) && is_array($input['doc_details'])) {
             $insStmt = $conn->prepare("
                 INSERT INTO transmittal_documents (ta_id, no_urut, doc_desc, remarks, created_by) 
                 VALUES (?, ?, ?, ?, ?)
             ");
+            if (!$insStmt) {
+                throw new Exception("Prepare doc_details gagal: " . $conn->error, 500);
+            }
+
             foreach ($input['doc_details'] as $doc) {
                 if (!isset($doc['no_urut']) || !isset($doc['doc_desc'])) continue;
                 $insStmt->bind_param(
@@ -108,6 +128,7 @@ if ($method === 'POST' && !$ta_id) {
         }
 
         $conn->commit();
+        error_log("Transaksi berhasil dikomit");
 
         echo json_encode([
             "status" => 200,
@@ -117,8 +138,8 @@ if ($method === 'POST' && !$ta_id) {
         exit;
 
     } catch (Exception $e) {
-        error_log("Error in CREATE: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
         $conn->rollback();
+        error_log("Error di POST: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
         http_response_code($e->getCode() ?: 500);
         echo json_encode(["error" => $e->getMessage()]);
         exit;
