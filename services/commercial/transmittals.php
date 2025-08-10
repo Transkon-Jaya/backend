@@ -1,9 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('log_errors', 1);
-ini_set('error_log', 'php-error.log');
-
 header("Content-Type: application/json");
 require_once 'db.php';
 require_once 'auth.php';
@@ -21,7 +16,7 @@ try {
 
     $conn->begin_transaction();
 
-
+    // === CREATE ===
     // === CREATE ===
 if ($method === 'POST' && !$ta_id) {
     $input = json_decode(file_get_contents("php://input"), true);
