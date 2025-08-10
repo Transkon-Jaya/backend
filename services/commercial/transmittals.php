@@ -26,8 +26,8 @@ try {
                 }
                 
                 $data = $result->fetch_assoc();
-                $data['doc_details'] = json_decode($data['doc_details'] ?? '[]', true);
-                
+                // Jika ingin tetap mengembalikan JSON kosong untuk kompatibilitas frontend
+                // hapus jika tidak butuh
                 echo json_encode([
                     "status" => 200,
                     "data" => $data
@@ -82,19 +82,16 @@ try {
             $nextNum = $lastId ? (int)substr($lastId, strlen($prefix)) + 1 : 2001;
             $ta_id = $prefix . str_pad($nextNum, 6, '0', STR_PAD_LEFT);
             
-            // Prepare doc_details
-            $docDetails = isset($input['doc_details']) ? json_encode($input['doc_details']) : '[]';
-            
             $stmt = $conn->prepare("
                 INSERT INTO transmittals_new (
                     ta_id, date, from_origin, document_type, attention, company,
                     address, state, awb_reg, expeditur, receiver_name, receive_date,
-                    ras_status, doc_details, created_by
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ras_status, description, remarks, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             
             $stmt->bind_param(
-                "sssssssssssssss",
+                "ssssssssssssssss",
                 $ta_id,
                 $input['date'],
                 $input['from_origin'],
@@ -108,7 +105,8 @@ try {
                 $input['receiver_name'] ?? null,
                 $input['receive_date'] ?? null,
                 $input['ras_status'] ?? 'Pending',
-                $docDetails,
+                $input['description'] ?? '',
+                $input['remarks'] ?? '',
                 $user['name']
             );
             
@@ -146,7 +144,7 @@ try {
             $updatableFields = [
                 'date', 'from_origin', 'document_type', 'attention', 'company',
                 'address', 'state', 'awb_reg', 'expeditur', 'receiver_name',
-                'receive_date', 'ras_status'
+                'receive_date', 'ras_status', 'description', 'remarks'
             ];
             
             foreach ($updatableFields as $field) {
@@ -155,13 +153,6 @@ try {
                     $params[] = $input[$field];
                     $types .= 's';
                 }
-            }
-            
-            // Handle doc_details separately
-            if (isset($input['doc_details'])) {
-                $fields[] = "doc_details = ?";
-                $params[] = json_encode($input['doc_details']);
-                $types .= 's';
             }
             
             if (empty($fields)) {
@@ -222,3 +213,4 @@ try {
 } finally {
     $conn->close();
 }
+?>
