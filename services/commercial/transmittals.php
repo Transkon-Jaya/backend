@@ -22,7 +22,6 @@ try {
     $conn->begin_transaction();
 
     // === CREATE ===
-    // === CREATE ===
 if ($method === 'POST' && !$ta_id) {
     $input = json_decode(file_get_contents("php://input"), true);
     if (!is_array($input)) throw new Exception("Input tidak valid", 400);
