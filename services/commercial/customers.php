@@ -12,14 +12,10 @@ try {
     }
 
     if (!$search) {
-        echo json_encode([
-            "status" => 400,
-            "error" => "Parameter 'search' diperlukan"
-        ]);
+        echo json_encode(["status" => 400, "error" => "Parameter 'search' diperlukan"]);
         exit;
     }
 
-    // Cari customer berdasarkan nama (case-insensitive)
     $stmt = $conn->prepare("SELECT name, address, state FROM customer WHERE name LIKE ? LIMIT 10");
     $likeSearch = "%$search%";
     $stmt->bind_param("s", $likeSearch);
@@ -31,17 +27,11 @@ try {
         $customers[] = $row;
     }
 
-    echo json_encode([
-        "status" => 200,
-        "data" => $customers
-    ]);
+    echo json_encode(["status" => 200, "data" => $customers]);
 
 } catch (Exception $e) {
     http_response_code($e->getCode() ?: 500);
-    echo json_encode([
-        "status" => $e->getCode() ?: 500,
-        "error" => $e->getMessage()
-    ]);
+    echo json_encode(["status" => $e->getCode() ?: 500, "error" => $e->getMessage()]);
 } finally {
     $conn->close();
 }
