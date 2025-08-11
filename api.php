@@ -27,6 +27,7 @@ $allowed_routes = [
     'transmittal' => 'services/commercial/transmittals.php',
     'transmittal_invoices' => 'services/commercial/transmittal_invoices.php',
     'customers_dropdown' => 'services/commercial/customers.php',
+    'get-next-ta-id' => 'services/commercial/get-next-ta-id.php',
     'de_site'        => 'services/de/de_site.php',
     'down_equipment' => 'services/de/down_equipment.php',
     'hr-lokasi'      => 'services/hr/lokasi.php',
