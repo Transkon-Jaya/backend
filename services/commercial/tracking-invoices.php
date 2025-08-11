@@ -10,10 +10,9 @@ try {
     $conn->autocommit(false);
 
     // ========================
-    // === GET: Ambil Semua Invoice untuk Tracking
+    // === GET: Ambil Semua Invoice
     // ========================
     if ($method === 'GET') {
-        // Query untuk ambil data invoice
         $sql = "
             SELECT 
                 ta_id,
@@ -59,7 +58,7 @@ try {
     }
 
     // ========================
-    // === PUT: Update Status Tracking (Checkbox & Remarks)
+    // === PUT: Update Status Tracking
     // ========================
     if ($method === 'PUT') {
         if (!$ta_id) {
@@ -85,25 +84,24 @@ try {
         $types = '';
 
         $fields = [
-            'acct' => 'i', 
-            'tax_dept' => 'i', 
-            'admin' => 'i', 
+            'acct' => 'i',
+            'tax_dept' => 'i',
+            'admin' => 'i',
             'expedisi' => 'i'
         ];
 
         foreach ($fields as $field => $type) {
             if (isset($input[$field])) {
-                $value = $input[$field] ? 1 : 0; // Konversi ke boolean MySQL
+                $value = $input[$field] ? 1 : 0;
                 $setParts[] = "$field = ?";
                 $params[] = $value;
                 $types .= $type;
             }
         }
 
-        // Tambahkan remarks jika ada
         if (isset($input['remarks'])) {
             $setParts[] = "tracking_remarks = ?";
-            $params[] = trim($input['remarks']);
+            $params[] = $input['remarks'];
             $types .= 's';
         }
 
