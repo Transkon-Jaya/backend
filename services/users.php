@@ -288,56 +288,85 @@ switch ($method) {
         break;
 
     case 'DELETE':
-        $username = $_GET['username'] ?? '';
-        if (empty($username)) {
-            http_response_code(400);
-            echo json_encode(["status" => 400, "error" => "Username is required"]);
-            break;
-        }
-
-        // Mulai transaksi
-        $conn->begin_transaction();
-        try {
-            // Hapus dari user_profiles terlebih dahulu
-            $stmt1 = $conn->prepare("DELETE FROM user_profiles WHERE username = ?");
-            if (!$stmt1) {
-                 throw new Exception("Prepare failed for user_profiles delete: " . $conn->error);
-            }
-            $stmt1->bind_param("s", $username);
-            if (!$stmt1->execute()) {
-                 throw new Exception("Execute failed for user_profiles delete: " . $stmt1->error);
-            }
-            $rows_affected_profile = $stmt1->affected_rows;
-            $stmt1->close();
-
-            // Kemudian hapus dari users
-            $stmt2 = $conn->prepare("DELETE FROM users WHERE username = ?");
-            if (!$stmt2) {
-                 throw new Exception("Prepare failed for users delete: " . $conn->error);
-            }
-            $stmt2->bind_param("s", $username);
-            if (!$stmt2->execute()) {
-                 throw new Exception("Execute failed for users delete: " . $stmt2->error);
-            }
-            $rows_affected_user = $stmt2->affected_rows;
-            $stmt2->close();
-
-            // Commit transaksi jika keduanya berhasil
-            $conn->commit();
-
-            if ($rows_affected_profile > 0 || $rows_affected_user > 0) {
-                 echo json_encode(["status" => 200, "message" => "User deleted successfully"]);
-            } else {
-                 echo json_encode(["status" => 404, "message" => "User not found"]);
-            }
-
-        } catch (Exception $e) {
-            $conn->rollback();
-            error_log("DB Transaction Error (user deletion): " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => "Failed to delete user. Please check server logs."]);
-        }
+    $username = $_GET['username'] ?? '';
+    
+    // Validasi username
+    if (empty($username)) {
+        http_response_code(400);
+        echo json_encode(["status" => 400, "error" => "Username is required"]);
         break;
+    }
+
+    if (!is_string($username)) {
+        http_response_code(400);
+        echo json_encode(["status" => 400, "error" => "Username must be a string"]);
+        break;
+    }
+
+    // Cek apakah user ada
+    $stmt_check = $conn->prepare("SELECT 1 FROM users WHERE username = ?");
+    $stmt_check->bind_param("s", $username);
+    $stmt_check->execute();
+    if ($stmt_check->get_result()->num_rows === 0) {
+        http_response_code(404);
+        echo json_encode(["status" => 404, "message" => "User not found"]);
+        $stmt_check->close();
+        break;
+    }
+    $stmt_check->close();
+
+    // Mulai transaksi
+    $conn->begin_transaction();
+    try {
+        // 🔴 Hapus data terkait di tabel lain
+        $related_tables = ['absensi', 'lembur', 'cuti', 'shift', 'log_login', 'user_profiles_history']; // Sesuaikan
+        foreach ($related_tables as $table) {
+            $sql = "DELETE FROM `$table` WHERE username = ?";
+            $stmt = $conn->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param("s", $username);
+                $stmt->execute();
+                $stmt->close();
+            }
+            // Jika tabel tidak ada, prepare gagal → abaikan (opsional log error)
+        }
+
+        // Hapus dari user_profiles
+        $stmt1 = $conn->prepare("DELETE FROM user_profiles WHERE username = ?");
+        $stmt1->bind_param("s", $username);
+        $stmt1->execute();
+        $rows_affected_profile = $stmt1->affected_rows;
+        $stmt1->close();
+
+        // Hapus dari users
+        $stmt2 = $conn->prepare("DELETE FROM users WHERE username = ?");
+        $stmt2->bind_param("s", $username);
+        $stmt2->execute();
+        $rows_affected_user = $stmt2->affected_rows;
+        $stmt2->close();
+
+        $conn->commit();
+
+        // Log untuk debugging
+        error_log("DELETE SUCCESS: $username | Profile: $rows_affected_profile | User: $rows_affected_user");
+
+        if ($rows_affected_profile > 0 || $rows_affected_user > 0) {
+            echo json_encode(["status" => 200, "message" => "User deleted successfully"]);
+        } else {
+            echo json_encode(["status" => 404, "message" => "User not found"]);
+        }
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("DB Transaction Error (user deletion): " . $e->getMessage() . " | Username: " . $username);
+        http_response_code(500);
+        echo json_encode([
+            "status" => 500,
+            "error" => "Failed to delete user. Please check server logs."
+            // Jangan tampilkan $e->getMessage() ke user di production
+        ]);
+    }
+    break;
 
 
     default:
