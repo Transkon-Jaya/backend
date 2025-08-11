@@ -69,13 +69,19 @@ try {
             break;
             
         case 'POST':
-    // CREATE operation
     $input = json_decode(file_get_contents('php://input'), true);
     
     if (empty($input['ta_id']) || empty($input['date']) || empty($input['from_origin'])) {
         throw new Exception("TA ID, Date and From Origin are required", 400);
     }
-    
+
+    // Pastikan user terotentikasi dan punya nama
+    if (!$user || !isset($user['name'])) {
+        throw new Exception("Authentication required or invalid token", 401);
+    }
+
+    $created_by = $user['name'] ?? 'Unknown User';
+
     $stmt = $conn->prepare("
         INSERT INTO transmittals_new (
             ta_id, date, from_origin, document_type, attention, company,
@@ -101,7 +107,7 @@ try {
         $input['ras_status'] ?? null,
         $input['description'] ?? '',
         $input['remarks'] ?? '',
-        $user['name']
+        $created_by
     );
     
     if (!$stmt->execute()) {
