@@ -10,10 +10,8 @@ try {
         throw new Exception("Method tidak diizinkan", 405);
     }
 
-    $conn->autocommit(false);
-
-    // Ambil dan update counter
-    $stmt = $conn->prepare("SELECT current_number FROM transmittal_counter WHERE id = 1 FOR UPDATE");
+    // Hanya baca, TIDAK update counter
+    $stmt = $conn->prepare("SELECT current_number FROM transmittal_counter WHERE id = 1");
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
@@ -23,12 +21,6 @@ try {
     }
 
     $nextNumber = (int)$row['current_number'];
-
-    // Update counter
-    $updateStmt = $conn->prepare("UPDATE transmittal_counter SET current_number = current_number + 1 WHERE id = 1");
-    $updateStmt->execute();
-
-    $conn->commit();
 
     $now = new DateTime();
     $year = $now->format('y');
@@ -44,7 +36,6 @@ try {
     ]);
 
 } catch (Exception $e) {
-    $conn->rollback();
     http_response_code($e->getCode() ?: 500);
     echo json_encode([
         "status" => $e->getCode() ?: 500,
