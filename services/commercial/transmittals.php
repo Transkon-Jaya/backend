@@ -4,25 +4,21 @@ require 'db.php';
 require 'auth.php';
 
 // 🔐 Ambil user dari token
-$currentUser = authorize(); // Akan exit jika token tidak valid
-$createdBy = $currentUser['name'] ?? 'System'; // Gunakan nama user, fallback ke 'System'
+$currentUser = authorize(); // Akan auto 401 jika token tidak valid
+$createdBy = $currentUser['name'] ?? 'System';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Jika POST dengan _method=PUT/DELETE, override method
+// Handle method override (untuk frontend)
 $originalMethod = $method;
 if ($method === 'POST') {
-    $overrideMethod = $_POST['_method'] ?? null;
-    if (!$overrideMethod) {
-        $input = json_decode(file_get_contents("php://input"), true);
-        $overrideMethod = $input['_method'] ?? null;
-    }
+    $input = json_decode(file_get_contents("php://input"), true);
+    $overrideMethod = $_POST['_method'] ?? ($input['_method'] ?? null);
     if ($overrideMethod) {
         $method = strtoupper($overrideMethod);
     }
 }
 
-// Ambil parameter
 $ta_id = $_GET['ta_id'] ?? null;
 $page  = max(1, (int)($_GET['page'] ?? 1));
 $limit = min(50, max(10, (int)($_GET['limit'] ?? 10)));
@@ -31,26 +27,23 @@ try {
     $conn->autocommit(false);
 
     // ========================
-    // === POST: Create New Transmittal
+    // === POST: Create Transmittal
     // ========================
     if ($method === 'POST') {
         $input = json_decode(file_get_contents("php://input"), true);
         if (!is_array($input)) {
-            throw new Exception("Data input tidak valid", 400);
+            throw new Exception("Data tidak valid", 400);
         }
 
-        // Validasi field wajib
-        if (empty($input['ta_id'])) {
-            throw new Exception("TA ID wajib diisi", 400);
-        }
-        if (empty($input['date'])) {
-            throw new Exception("Tanggal wajib diisi", 400);
-        }
-        if (empty($input['from_origin'])) {
-            throw new Exception("From Origin wajib diisi", 400);
+        // Validasi field wajib (receive_date TIDAK termasuk)
+        $required = ['ta_id', 'date', 'from_origin'];
+        foreach ($required as $field) {
+            if (empty($input[$field])) {
+                throw new Exception(ucfirst(str_replace('_', ' ', $field)) . " wajib diisi", 400);
+            }
         }
 
-        // Siapkan data
+        // Siapkan data — receive_date boleh null
         $ta_id          = $input['ta_id'];
         $date           = $input['date'];
         $from_origin    = $input['from_origin'];
@@ -62,20 +55,20 @@ try {
         $awb_reg        = $input['awb_reg'] ?? '';
         $expeditur      = $input['expeditur'] ?? '';
         $receiver_name  = $input['receiver_name'] ?? null;
-        $receive_date   = $input['receive_date'] ?? null;
+        $receive_date   = $input['receive_date'] ?? null; // ✅ Boleh null
         $ras_status     = $input['ras_status'] ?? null;
         $description    = $input['description'] ?? '';
         $remarks        = $input['remarks'] ?? '';
 
-        // Cek duplikasi TA ID
-        $checkStmt = $conn->prepare("SELECT 1 FROM transmittals_new WHERE ta_id = ?");
-        $checkStmt->bind_param("s", $ta_id);
-        $checkStmt->execute();
-        if ($checkStmt->get_result()->num_rows > 0) {
-            throw new Exception("TA ID sudah ada: $ta_id", 409);
+        // Cek duplikasi
+        $check = $conn->prepare("SELECT 1 FROM transmittals_new WHERE ta_id = ?");
+        $check->bind_param("s", $ta_id);
+        $check->execute();
+        if ($check->get_result()->num_rows > 0) {
+            throw new Exception("TA ID sudah ada", 409);
         }
 
-        // Insert ke database
+        // Insert
         $sql = "INSERT INTO transmittals_new (
                     ta_id, date, from_origin, document_type, attention, company,
                     address, state, awb_reg, expeditur, receiver_name, receive_date,
@@ -83,32 +76,15 @@ try {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Gagal prepare query: " . $conn->error);
-        }
-
         $stmt->bind_param(
             "ssssssssssssssss",
-            $ta_id,
-            $date,
-            $from_origin,
-            $document_type,
-            $attention,
-            $company,
-            $address,
-            $state,
-            $awb_reg,
-            $expeditur,
-            $receiver_name,
-            $receive_date,
-            $ras_status,
-            $description,
-            $remarks,
-            $createdBy
+            $ta_id, $date, $from_origin, $document_type, $attention, $company,
+            $address, $state, $awb_reg, $expeditur, $receiver_name, $receive_date,
+            $ras_status, $description, $remarks, $createdBy
         );
 
         if (!$stmt->execute()) {
-            throw new Exception("Gagal menyimpan data: " . $stmt->error);
+            throw new Exception("Gagal simpan: " . $stmt->error);
         }
 
         $conn->commit();
@@ -116,8 +92,7 @@ try {
         echo json_encode([
             "status" => 201,
             "message" => "Transmittal berhasil dibuat",
-            "ta_id" => $ta_id,
-            "created_by" => $createdBy
+            "ta_id" => $ta_id
         ]);
         exit;
     }
@@ -126,14 +101,10 @@ try {
     // === PUT: Update Transmittal
     // ========================
     if ($method === 'PUT') {
-        if (!$ta_id) {
-            throw new Exception("TA ID diperlukan", 400);
-        }
+        if (!$ta_id) throw new Exception("TA ID diperlukan", 400);
 
         $input = json_decode(file_get_contents("php://input"), true);
-        if (!is_array($input)) {
-            throw new Exception("Data tidak valid", 400);
-        }
+        if (!is_array($input)) throw new Exception("Data tidak valid", 400);
 
         // Cek eksistensi
         $check = $conn->prepare("SELECT 1 FROM transmittals_new WHERE ta_id = ?");
@@ -144,7 +115,7 @@ try {
         }
 
         // Field yang bisa diupdate
-        $fields = [
+        $updatable = [
             'date', 'from_origin', 'document_type', 'attention', 'company',
             'address', 'state', 'awb_reg', 'expeditur', 'receiver_name',
             'receive_date', 'ras_status', 'description', 'remarks'
@@ -154,8 +125,8 @@ try {
         $params = [];
         $types = '';
 
-        foreach ($fields as $field) {
-            if (array_key_exists($field, $input)) {
+        foreach ($updatable as $field) {
+            if (isset($input[$field])) {
                 $setParts[] = "$field = ?";
                 $params[] = $input[$field];
                 $types .= 's';
@@ -173,10 +144,6 @@ try {
         $types .= 's';
 
         $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Gagal prepare query: " . $conn->error);
-        }
-
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
 
@@ -184,18 +151,16 @@ try {
 
         echo json_encode([
             "status" => 200,
-            "message" => "Transmittal berhasil diperbarui"
+            "message" => "Transmittal diperbarui"
         ]);
         exit;
     }
 
     // ========================
-    // === DELETE: Hapus Transmittal
+    // === DELETE
     // ========================
     if ($method === 'DELETE') {
-        if (!$ta_id) {
-            throw new Exception("TA ID diperlukan", 400);
-        }
+        if (!$ta_id) throw new Exception("TA ID diperlukan", 400);
 
         $stmt = $conn->prepare("DELETE FROM transmittals_new WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
@@ -209,51 +174,39 @@ try {
 
         echo json_encode([
             "status" => 200,
-            "message" => "Transmittal berhasil dihapus"
+            "message" => "Transmittal dihapus"
         ]);
         exit;
     }
 
     // ========================
-    // === GET: Ambil Satu Data
+    // === GET: Single
     // ========================
     if ($method === 'GET' && $ta_id) {
-        $stmt = $conn->prepare("
-            SELECT * FROM transmittals_new WHERE ta_id = ?
-        ");
+        $stmt = $conn->prepare("SELECT * FROM transmittals_new WHERE ta_id = ?");
         $stmt->bind_param("s", $ta_id);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $data = $result->fetch_assoc();
+        $data = $stmt->get_result()->fetch_assoc();
 
-        if (!$data) {
-            throw new Exception("Transmittal tidak ditemukan", 404);
-        }
+        if (!$data) throw new Exception("Transmittal tidak ditemukan", 404);
 
+        echo json_encode(["status" => 200, "data" => $data]);
         $conn->commit();
-
-        echo json_encode([
-            "status" => 200,
-            "data" => $data
-        ]);
         exit;
     }
 
     // ========================
-    // === GET: List Semua Transmittal (Paginated)
+    // === GET: List
     // ========================
     if ($method === 'GET') {
         $offset = ($page - 1) * $limit;
 
-        // Hitung total
-        $countStmt = $conn->query("SELECT COUNT(*) as total FROM transmittals_new");
-        $total = $countStmt->fetch_assoc()['total'];
-        $totalPages = ceil($total / $limit);
+        $count = $conn->query("SELECT COUNT(*) as total FROM transmittals_new")->fetch_assoc()['total'];
+        $totalPages = ceil($count / $limit);
 
-        // Ambil data
         $stmt = $conn->prepare("
-            SELECT ta_id, date, from_origin, document_type, company, 
-                   ras_status, description, remarks, created_by, created_at
+            SELECT ta_id, date, from_origin, company, ras_status, description, 
+                   receive_date, created_by, created_at 
             FROM transmittals_new 
             ORDER BY date DESC 
             LIMIT ? OFFSET ?
@@ -272,7 +225,7 @@ try {
         echo json_encode([
             "status" => 200,
             "items" => $items,
-            "totalCount" => (int)$total,
+            "totalCount" => (int)$count,
             "totalPages" => (int)$totalPages,
             "page" => $page,
             "limit" => $limit
@@ -280,8 +233,7 @@ try {
         exit;
     }
 
-    // Method tidak didukung
-    throw new Exception("Method tidak diizinkan", 405);
+    throw new Exception("Method tidak didukung", 405);
 
 } catch (Exception $e) {
     $conn->rollback();
