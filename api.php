@@ -29,6 +29,7 @@ $allowed_routes = [
     'customers_dropdown' => 'services/commercial/customers.php',
     'get-next-ta-id' => 'services/commercial/get-next-ta-id.php',
     'tracking-invoices'  => 'services/commercial/tracking-invoices.php',
+    'filter_by_date'     => 'services/commercial/filter_by_date.php',
     'de_site'        => 'services/de/de_site.php',
     'down_equipment' => 'services/de/down_equipment.php',
     'hr-lokasi'      => 'services/hr/lokasi.php',
