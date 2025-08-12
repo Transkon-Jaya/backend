@@ -242,18 +242,31 @@ if ($method === 'GET' && !$ta_id) {
     }
 
     // Filter: start_date
-    if (!empty($_GET['start_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['start_date'])) {
+if (isset($_GET['start_date']) && !empty(trim($_GET['start_date']))) {
+    $start_date = trim($_GET['start_date']);
+    // Validasi format YYYY-MM-DD
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date)) {
         $where[] = "date >= ?";
-        $params[] = $_GET['start_date'];
+        $params[] = $start_date;
         $types .= 's';
+        error_log("Filter start_date diterapkan: $start_date"); // Log
+    } else {
+        error_log("Filter start_date format salah: $start_date");
     }
+}
 
-    // Filter: end_date (opsional)
-    if (!empty($_GET['end_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['end_date'])) {
+// Filter: end_date
+if (isset($_GET['end_date']) && !empty(trim($_GET['end_date']))) {
+    $end_date = trim($_GET['end_date']);
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) {
         $where[] = "date <= ?";
-        $params[] = $_GET['end_date'];
+        $params[] = $end_date;
         $types .= 's';
+        error_log("Filter end_date diterapkan: $end_date");
+    } else {
+        error_log("Filter end_date format salah: $end_date");
     }
+}
 
     // Gabungkan WHERE
     $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
