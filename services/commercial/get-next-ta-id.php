@@ -1,3 +1,4 @@
+// File: get-next-ta-id.php
 <?php
 header("Content-Type: application/json");
 require 'db.php';
@@ -10,36 +11,27 @@ try {
         throw new Exception("Method tidak diizinkan", 405);
     }
 
-    // Mulai transaksi
     $conn->begin_transaction();
 
-    // Ambil dan langsung increment counter (menghindari race condition)
-    $stmt = $conn->prepare("
-        UPDATE transmittal_counter 
-        SET current_number = current_number + 1 
-        WHERE id = 1 
-        LIMIT 1
-    ");
+    // Increment counter dan ambil nilai baru
+    $stmt = $conn->prepare("UPDATE transmittal_counter SET current_number = current_number + 1 WHERE id = 1");
     $stmt->execute();
 
     if ($stmt->affected_rows === 0) {
-        throw new Exception("Gagal update counter", 500);
+        throw new Exception("Counter tidak ditemukan", 500);
     }
 
-    // Ambil nilai baru setelah increment
     $stmt = $conn->prepare("SELECT current_number FROM transmittal_counter WHERE id = 1");
     $stmt->execute();
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
-
     $nextNumber = (int)$row['current_number'];
 
-    // Format TA ID: TRJA{YY}{MM}{DD}-{number}
+    // Format TA ID
     $now = new DateTime();
     $year = $now->format('y');
     $month = $now->format('m');
     $day = $now->format('d');
-
     $taId = "TRJA{$year}{$month}{$day}-{$nextNumber}";
 
     $conn->commit();
@@ -49,7 +41,6 @@ try {
         "ta_id" => $taId,
         "number" => $nextNumber
     ]);
-
 } catch (Exception $e) {
     $conn->rollback();
     http_response_code($e->getCode() ?: 500);
