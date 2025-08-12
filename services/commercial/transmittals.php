@@ -195,42 +195,84 @@ try {
         exit;
     }
 
-    // ========================
-    // === GET: List
-    // ========================
-    if ($method === 'GET') {
-        $offset = ($page - 1) * $limit;
-
-        $count = $conn->query("SELECT COUNT(*) as total FROM transmittals_new")->fetch_assoc()['total'];
-        $totalPages = ceil($count / $limit);
-
-        $stmt = $conn->prepare("
-            SELECT ta_id, date, from_origin, company, ras_status, description, 
-                   receive_date, created_by, created_at 
-            FROM transmittals_new 
-            ORDER BY date DESC 
-            LIMIT ? OFFSET ?
-        ");
-        $stmt->bind_param("ii", $limit, $offset);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $items = [];
-        while ($row = $result->fetch_assoc()) {
-            $items[] = $row;
-        }
-
-        $conn->commit();
-
-        echo json_encode([
-            "status" => 200,
-            "items" => $items,
-            "totalCount" => (int)$count,
-            "totalPages" => (int)$totalPages,
-            "page" => $page,
-            "limit" => $limit
-        ]);
-        exit;
+   // ========================
+// === GET: List
+// ========================
+if ($method === 'GET') {
+    $offset = ($page - 1) * $limit;
+    
+    // Ambil parameter filter
+    $start_date = $_GET['start_date'] ?? null;
+    $end_date = $_GET['end_date'] ?? null;
+    
+    // Bangun query dinamis
+    $baseQuery = "FROM transmittals_new";
+    $whereClauses = [];
+    $params = [];
+    $types = '';
+    
+    // Tambahkan kondisi filter tanggal jika ada
+    if ($start_date) {
+        $whereClauses[] = "date >= ?";
+        $params[] = $start_date;
+        $types .= 's';
+    }
+    if ($end_date) {
+        $whereClauses[] = "date <= ?";
+        $params[] = $end_date;
+        $types .= 's';
+    }
+    
+    $where = $whereClauses ? "WHERE " . implode(" AND ", $whereClauses) : "";
+    
+    // Query untuk count total
+    $countQuery = "SELECT COUNT(*) as total $baseQuery $where";
+    $countStmt = $conn->prepare($countQuery);
+    
+    if ($params) {
+        $countStmt->bind_param($types, ...$params);
+    }
+    
+    $countStmt->execute();
+    $count = $countStmt->get_result()->fetch_assoc()['total'];
+    $totalPages = ceil($count / $limit);
+    
+    // Query untuk data
+    $dataQuery = "
+        SELECT ta_id, date, from_origin, company, ras_status, description, 
+               receive_date, created_by, created_at 
+        $baseQuery 
+        $where
+        ORDER BY date DESC 
+        LIMIT ? OFFSET ?
+    ";
+    
+    $params[] = $limit;
+    $params[] = $offset;
+    $types .= 'ii';
+    
+    $stmt = $conn->prepare($dataQuery);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $items = [];
+    while ($row = $result->fetch_assoc()) {
+        $items[] = $row;
+    }
+    
+    $conn->commit();
+    
+    echo json_encode([
+        "status" => 200,
+        "items" => $items,
+        "totalCount" => (int)$count,
+        "totalPages" => (int)$totalPages,
+        "page" => $page,
+        "limit" => $limit
+    ]);
+    exit;
+}
     }
 
     throw new Exception("Method tidak didukung", 405);
