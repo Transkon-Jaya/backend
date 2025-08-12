@@ -196,42 +196,113 @@ try {
     }
 
     // ========================
-    // === GET: List
-    // ========================
-    if ($method === 'GET') {
-        $offset = ($page - 1) * $limit;
+// === GET: List (dengan filter)
+// ========================
+if ($method === 'GET' && !$ta_id) {
+    $offset = ($page - 1) * $limit;
 
-        $count = $conn->query("SELECT COUNT(*) as total FROM transmittals_new")->fetch_assoc()['total'];
-        $totalPages = ceil($count / $limit);
+    // Build WHERE clause dari filter
+    $where = [];
+    $params = [];
+    $types = '';
 
-        $stmt = $conn->prepare("
-            SELECT ta_id, date, from_origin, company, ras_status, description, 
-                   receive_date, created_by, created_at 
-            FROM transmittals_new 
-            ORDER BY date DESC 
-            LIMIT ? OFFSET ?
-        ");
-        $stmt->bind_param("ii", $limit, $offset);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $items = [];
-        while ($row = $result->fetch_assoc()) {
-            $items[] = $row;
-        }
-
-        $conn->commit();
-
-        echo json_encode([
-            "status" => 200,
-            "items" => $items,
-            "totalCount" => (int)$count,
-            "totalPages" => (int)$totalPages,
-            "page" => $page,
-            "limit" => $limit
-        ]);
-        exit;
+    // Filter: ta_id
+    if (!empty($_GET['ta_id'])) {
+        $where[] = "ta_id LIKE ?";
+        $params[] = '%' . $_GET['ta_id'] . '%';
+        $types .= 's';
     }
+
+    // Filter: from_origin
+    if (!empty($_GET['from_origin'])) {
+        $where[] = "from_origin LIKE ?";
+        $params[] = '%' . $_GET['from_origin'] . '%';
+        $types .= 's';
+    }
+
+    // Filter: description
+    if (!empty($_GET['description'])) {
+        $where[] = "description LIKE ?";
+        $params[] = '%' . $_GET['description'] . '%';
+        $types .= 's';
+    }
+
+    // Filter: company
+    if (!empty($_GET['company'])) {
+        $where[] = "company LIKE ?";
+        $params[] = '%' . $_GET['company'] . '%';
+        $types .= 's';
+    }
+
+    // Filter: ras_status
+    if (!empty($_GET['ras_status'])) {
+        $where[] = "ras_status = ?";
+        $params[] = $_GET['ras_status'];
+        $types .= 's';
+    }
+
+    // Filter: start_date
+    if (!empty($_GET['start_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['start_date'])) {
+        $where[] = "date >= ?";
+        $params[] = $_GET['start_date'];
+        $types .= 's';
+    }
+
+    // Filter: end_date (opsional)
+    if (!empty($_GET['end_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['end_date'])) {
+        $where[] = "date <= ?";
+        $params[] = $_GET['end_date'];
+        $types .= 's';
+    }
+
+    // Gabungkan WHERE
+    $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+    // Hitung total dengan filter
+    $countSql = "SELECT COUNT(*) as total FROM transmittals_new $whereClause";
+    $countStmt = $conn->prepare($countSql);
+    if (!empty($params)) {
+        $countStmt->bind_param($types, ...$params);
+    }
+    $countStmt->execute();
+    $count = $countStmt->get_result()->fetch_assoc()['total'];
+    $totalPages = ceil($count / $limit);
+
+    // Ambil data dengan filter
+    $sql = "
+        SELECT ta_id, date, from_origin, company, ras_status, description, 
+               receive_date, created_by, created_at 
+        FROM transmittals_new 
+        $whereClause
+        ORDER BY date DESC 
+        LIMIT ? OFFSET ?
+    ";
+    $types .= 'ii'; // tambah tipe untuk limit & offset
+    $params[] = $limit;
+    $params[] = $offset;
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $items = [];
+    while ($row = $result->fetch_assoc()) {
+        $items[] = $row;
+    }
+
+    $conn->commit();
+
+    echo json_encode([
+        "status" => 200,
+        "items" => $items,
+        "totalCount" => (int)$count,
+        "totalPages" => (int)$totalPages,
+        "page" => $page,
+        "limit" => $limit
+    ]);
+    exit;
+}
 
     throw new Exception("Method tidak didukung", 405);
 
