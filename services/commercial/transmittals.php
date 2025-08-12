@@ -27,96 +27,75 @@ try {
     $conn->autocommit(false);
 
     // ========================
-// === POST: Create Transmittal
-// ========================
-if ($method === 'POST') {
-    $input = json_decode(file_get_contents("php://input"), true);
-    if (!is_array($input)) {
-        throw new Exception("Data tidak valid", 400);
-    }
-
-    // Validasi field wajib — TA ID DIHASILKAN OLEH SERVER, JADI TIDAK PERLU DARI FRONTEND
-    $required = ['date', 'from_origin'];
-    foreach ($required as $field) {
-        if (empty($input[$field])) {
-            throw new Exception(ucfirst(str_replace('_', ' ', $field)) . " wajib diisi", 400);
+    // === POST: Create Transmittal
+    // ========================
+    if ($method === 'POST') {
+        $input = json_decode(file_get_contents("php://input"), true);
+        if (!is_array($input)) {
+            throw new Exception("Data tidak valid", 400);
         }
+
+        // Validasi field wajib (receive_date TIDAK termasuk)
+        $required = ['ta_id', 'date', 'from_origin'];
+        foreach ($required as $field) {
+            if (empty($input[$field])) {
+                throw new Exception(ucfirst(str_replace('_', ' ', $field)) . " wajib diisi", 400);
+            }
+        }
+
+        // Siapkan data — receive_date boleh null
+        $ta_id          = $input['ta_id'];
+        $date           = $input['date'];
+        $from_origin    = $input['from_origin'];
+        $document_type  = $input['document_type'] ?? null;
+        $attention      = $input['attention'] ?? '';
+        $company        = $input['company'] ?? '';
+        $address        = $input['address'] ?? '';
+        $state          = $input['state'] ?? '';
+        $awb_reg        = $input['awb_reg'] ?? '';
+        $expeditur      = $input['expeditur'] ?? '';
+        $receiver_name  = $input['receiver_name'] ?? null;
+        $receive_date   = $input['receive_date'] ?? null; // ✅ Boleh null
+        $ras_status     = $input['ras_status'] ?? null;
+        $description    = $input['description'] ?? '';
+        $remarks        = $input['remarks'] ?? '';
+
+        // Cek duplikasi
+        $check = $conn->prepare("SELECT 1 FROM transmittals_new WHERE ta_id = ?");
+        $check->bind_param("s", $ta_id);
+        $check->execute();
+        if ($check->get_result()->num_rows > 0) {
+            throw new Exception("TA ID sudah ada", 409);
+        }
+
+        // Insert
+        $sql = "INSERT INTO transmittals_new (
+                    ta_id, date, from_origin, document_type, attention, company,
+                    address, state, awb_reg, expeditur, receiver_name, receive_date,
+                    ras_status, description, remarks, created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param(
+            "ssssssssssssssss",
+            $ta_id, $date, $from_origin, $document_type, $attention, $company,
+            $address, $state, $awb_reg, $expeditur, $receiver_name, $receive_date,
+            $ras_status, $description, $remarks, $createdBy
+        );
+
+        if (!$stmt->execute()) {
+            throw new Exception("Gagal simpan: " . $stmt->error);
+        }
+
+        $conn->commit();
+
+        echo json_encode([
+            "status" => 201,
+            "message" => "Transmittal berhasil dibuat",
+            "ta_id" => $ta_id
+        ]);
+        exit;
     }
-
-    // --- 🔥 LANGKAH 1: AMBIL & INCREMENT COUNTER ---
-    $conn->prepare("UPDATE transmittal_counter SET current_number = current_number + 1 WHERE id = 1")->execute();
-
-    $result = $conn->prepare("SELECT current_number FROM transmittal_counter WHERE id = 1")->execute();
-    $counterRow = $result->get_result()->fetch_assoc();
-    if (!$counterRow) {
-        throw new Exception("Gagal baca counter setelah increment", 500);
-    }
-    $nextNumber = (int)$counterRow['current_number'];
-
-    // --- 🔥 LANGKAH 2: BUAT TA ID OTOMATIS ---
-    $now = new DateTime();
-    $year = $now->format('y');
-    $month = $now->format('m');
-    $day = $now->format('d');
-    $ta_id = "TRJA{$year}{$month}{$day}-{$nextNumber}";
-
-    // --- LANGKAH 3: AMBIL DATA DARI INPUT ---
-    $date           = $input['date'];
-    $from_origin    = $input['from_origin'];
-    $document_type  = $input['document_type'] ?? null;
-    $attention      = $input['attention'] ?? '';
-    $company        = $input['company'] ?? '';
-    $address        = $input['address'] ?? '';
-    $state          = $input['state'] ?? '';
-    $awb_reg        = $input['awb_reg'] ?? '';
-    $expeditur      = $input['expeditur'] ?? '';
-    $receiver_name  = $input['receiver_name'] ?? null;
-    $receive_date   = $input['receive_date'] ?? null;
-    $ras_status     = $input['ras_status'] ?? null;
-    $description    = $input['description'] ?? '';
-    $remarks        = $input['remarks'] ?? '';
-
-    // --- LANGKAH 4: CEK DUPLIKASI (Opsional, karena ta_id unik) ---
-    $check = $conn->prepare("SELECT 1 FROM transmittals_new WHERE ta_id = ?");
-    $check->bind_param("s", $ta_id);
-    $check->execute();
-    if ($check->get_result()->num_rows > 0) {
-        throw new Exception("TA ID sudah ada (duplikat)", 409);
-    }
-
-    // --- LANGKAH 5: SIMPAN KE DATABASE ---
-    $sql = "INSERT INTO transmittals_new (
-                ta_id, date, from_origin, document_type, attention, company,
-                address, state, awb_reg, expeditur, receiver_name, receive_date,
-                ras_status, description, remarks, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param(
-        "ssssssssssssssss",
-        $ta_id, $date, $from_origin, $document_type, $attention, $company,
-        $address, $state, $awb_reg, $expeditur, $receiver_name, $receive_date,
-        $ras_status, $description, $remarks, $createdBy
-    );
-
-    if (!$stmt->execute()) {
-        throw new Exception("Gagal menyimpan data: " . $stmt->error);
-    }
-
-    // --- 🔥 COMMIT TRANSAKSI ---
-    $conn->commit();
-
-    // --- ✅ RESPON SUKSES ---
-    http_response_code(201);
-    echo json_encode([
-        "status" => 201,
-        "message" => "Transmittal berhasil dibuat",
-        "ta_id" => $ta_id,
-        "number" => $nextNumber,
-        "date" => $date
-    ]);
-    exit;
-}
 
     // ========================
     // === PUT: Update Transmittal
