@@ -15,19 +15,26 @@ try {
     if ($method === 'GET') {
         $sql = "
             SELECT 
-                ta_id,
-                description AS invoiceNo,
-                date AS invoiceDate,
-                acct,
-                tax_dept,
-                admin,
-                expedisi,
-                tracking_remarks AS remarks
-            FROM transmittals_new 
-            WHERE description IS NOT NULL 
-              AND TRIM(description) != ''
-              AND (document_type = 'Invoice' OR description REGEXP '^[A-Z]{1,2}[0-9]{6,8}')
-            ORDER BY date DESC
+    ta_id,
+    description AS invoiceNo,
+    DATE(date) AS invoiceDate,
+    acct,
+    tax_dept,
+    admin,
+    expedisi,
+    tracking_remarks AS remarks
+FROM transmittals_new 
+WHERE description IS NOT NULL 
+  AND TRIM(description) != ''
+  AND description != '0'
+  -- Hapus filter document_type = 'Invoice', karena tidak terisi
+  -- Tambahkan filter agar description mengandung pola invoice
+  AND (
+    description RLIKE '^[A-Z][0-9]{6,}'        -- e.g. R123456
+    OR description RLIKE '^[A-Z]{2}[0-9]{6,}'  -- e.g. TR123456
+    OR description REGEXP '[0-9]{6,}'          -- jika hanya angka (minimal 6 digit)
+  )
+ORDER BY date DESC;
         ";
 
         $stmt = $conn->prepare($sql);
