@@ -14,14 +14,18 @@ try {
     // ========================
     if ($method === 'GET') {
         $sql = "
-            SELECT ta_id, description 
+            SELECT 
+    ta_id,
+    description AS invoiceNo,
+    DATE(date) AS invoiceDate,
+    acct,
+    tax_dept,
+    admin,
+    expedisi,
+    tracking_remarks AS remarks
 FROM transmittals_new 
-WHERE 
-    ta_id RLIKE '^TRJA[0-9]{4,}$'
-    AND CAST(SUBSTRING(ta_id, 5) AS UNSIGNED) >= 2000
-ORDER BY 
-    CAST(SUBSTRING(ta_id, 5) AS UNSIGNED) DESC;
-        ";
+WHERE description IS NOT NULL 
+ORDER BY date DESC;";
 
         $stmt = $conn->prepare($sql);
         $stmt->execute();
