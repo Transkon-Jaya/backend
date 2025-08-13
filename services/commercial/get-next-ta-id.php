@@ -21,9 +21,13 @@ try {
     }
 
     $nextNumber = (int)$row['current_number'];
-    
-    // Format baru: TRJA + angka 4 digit (contoh: TRJA2001)
-    $taId = "TRJA" . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+
+    $now = new DateTime();
+    $year = $now->format('y');
+    $month = $now->format('m');
+    $day = $now->format('d');
+
+    $taId = "TRJA{$year}{$month}{$day}-{$nextNumber}";
 
     echo json_encode([
         "status" => 200,
