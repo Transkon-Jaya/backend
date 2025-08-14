@@ -7,8 +7,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $username = $_GET['username'] ?? null;
-        authorize(8, ['admin_absensi'], [], $username);
+        authorize(8, ["admin_absensi"], [], null);
+        $user = verifyToken();
+        $id_company = $user['id_company'] ?? -1;
 
         // Baca dan proses parameter month (format: YYYY-MM)
         $monthInput = $_GET['month'] ?? null;
