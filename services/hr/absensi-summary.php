@@ -52,65 +52,64 @@ switch ($method) {
 
         $sql = "
             SELECT 
-    u.username AS NIK,
-    u.name,
-    u.department,
-    u.lokasi,
-    u.jabatan,
-    NULL AS Kepeg,
-    $dayColumnsSql,
-    agg.total_hadir AS `Tot Hadir`,
-    NULL AS PD,
-    NULL AS `Adj PD`,
-    NULL AS OFF,
-    NULL AS Absen,
-    NULL AS Izin,
-    NULL AS Sakit,
-    NULL AS `Cuti Lokasi`,
-    NULL AS `Cuti Tahunan`,
-    agg.total_telat AS Telat,
-    CASE 
-        WHEN agg.total_hadir = 0 THEN 0
-        ELSE ROUND((agg.total_telat / agg.total_hadir) * 100, 2)
-    END AS `Telat(%)`,
-    CASE 
-        WHEN agg.total_hadir = 0 THEN ''
-        WHEN (agg.total_telat / agg.total_hadir) * 100 >= 70 THEN 'SP1'
-        WHEN (agg.total_telat / agg.total_hadir) * 100 > 10 THEN 'Coaching'
-        ELSE ''
-    END AS Action,
-    agg.count_ovt AS Overhour,
-    CASE 
-        WHEN agg.total_hadir = 0 THEN 0
-        ELSE ROUND((agg.count_ovt / agg.total_hadir) * 100, 2)
-    END AS `Overhour(%)`,
-    agg.total_ovt_hour AS `Overhour(H)`,
-    agg.total_ovt AS `Tot Overhour`,
-    agg.avg_hour_in AS 'AVG HOUR IN',
-    agg.total_hour_worked AS 'TOT HOUR WORKED'
-FROM user_profiles u
-LEFT JOIN (
-    SELECT 
-        a.username,
-        COUNT(DISTINCT a.tanggal) AS total_hadir,
-        SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS total_telat,
-        SUM(CASE WHEN a.ovt > 0 THEN 1 ELSE 0 END) AS count_ovt,
-        SUM(a.ovt) AS total_ovt_hour,
-        SUM(a.total) AS total_ovt,
-        TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_in)))), '%H:%i:%s') AS avg_hour_in,
-        TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
-        ROUND(SUM(a.hour_worked), 2) as total_hour_worked
-    FROM hr_absensi a
-    WHERE a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
-    GROUP BY a.username
-) agg ON u.username = agg.username
-LEFT JOIN hr_absensi a 
-    ON u.username = a.username
-    AND a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
-WHERE u.username LIKE 'tj%'
-    AND (0 = :id_company OR u.id_company = :id_company)
-GROUP BY u.username, u.name, u.department
-ORDER BY u.username
+                u.username AS NIK,
+                u.name,
+                u.department,
+                u.lokasi,
+                u.jabatan,
+                NULL AS Kepeg,
+                $dayColumnsSql,
+                agg.total_hadir AS `Tot Hadir`,
+                NULL AS PD,
+                NULL AS `Adj PD`,
+                NULL AS OFF,
+                NULL AS Absen,
+                NULL AS Izin,
+                NULL AS Sakit,
+                NULL AS `Cuti Lokasi`,
+                NULL AS `Cuti Tahunan`,
+                agg.total_telat AS Telat,
+                CASE 
+                    WHEN agg.total_hadir = 0 THEN 0
+                    ELSE ROUND((agg.total_telat / agg.total_hadir) * 100, 2)
+                END AS `Telat(%)`,
+                CASE 
+                    WHEN agg.total_hadir = 0 THEN ''
+                    WHEN (agg.total_telat / agg.total_hadir) * 100 >= 70 THEN 'SP1'
+                    WHEN (agg.total_telat / agg.total_hadir) * 100 > 10 THEN 'Coaching'
+                    ELSE ''
+                END AS Action,
+                agg.count_ovt AS Overhour,
+                CASE 
+                    WHEN agg.total_hadir = 0 THEN 0
+                    ELSE ROUND((agg.count_ovt / agg.total_hadir) * 100, 2)
+                END AS `Overhour(%)`,
+                agg.total_ovt_hour AS `Overhour(H)`,
+                agg.total_ovt AS `Tot Overhour`,
+                agg.avg_hour_in AS 'AVG HOUR IN',
+                agg.total_hour_worked AS 'TOT HOUR WORKED'
+            FROM user_profiles u
+            LEFT JOIN (
+                SELECT 
+                    a.username,
+                    COUNT(DISTINCT a.tanggal) AS total_hadir,
+                    SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS total_telat,
+                    SUM(CASE WHEN a.ovt > 0 THEN 1 ELSE 0 END) AS count_ovt,
+                    SUM(a.ovt) AS total_ovt_hour,
+                    SUM(a.total) AS total_ovt,
+                    TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_in)))), '%H:%i:%s') AS avg_hour_in,
+                    TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
+                    ROUND(SUM(a.hour_worked), 2) as total_hour_worked
+                FROM hr_absensi a
+                WHERE a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
+                GROUP BY a.username
+            ) agg ON u.username = agg.username
+            LEFT JOIN hr_absensi a 
+                ON u.username = a.username
+                AND a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
+            WHERE u.username LIKE 'tj%'
+            GROUP BY u.username, u.name, u.department
+            ORDER BY u.username
         ";
 
         $result = $conn->query($sql);
