@@ -9,9 +9,32 @@ switch ($method) {
     case 'GET':
         $username = $_GET['username'] ?? null;
         authorize(8, ['admin_absensi'], [], $username);
-        
-        $month = $_GET['month'] ?? date('n');
-        $year = $_GET['year'] ?? date('Y');
+
+        // Baca dan proses parameter month (format: YYYY-MM)
+        $monthInput = $_GET['month'] ?? null;
+        if ($monthInput && preg_match('/^(\d{4})-(\d{2})$/', $monthInput, $matches)) {
+            $year = (int)$matches[1];
+            $month = (int)$matches[2];
+        } else {
+            $year = (int)date('Y');
+            $month = (int)date('n');
+        }
+
+        // Validasi
+        if ($month < 1 || $month > 12) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Bulan tidak valid"]);
+            exit;
+        }
+        if ($year < 2000 || $year > 2100) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Tahun tidak valid"]);
+            exit;
+        }
+
+        // Hitung rentang tanggal
+        $start_date = "$year-$month-01";
+        $end_date = date("Y-m-t", strtotime($start_date)); // akhir bulan
 
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
@@ -78,14 +101,13 @@ switch ($method) {
                     TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
                     ROUND(SUM(a.hour_worked), 2) as total_hour_worked
                 FROM hr_absensi a
-                WHERE MONTH(a.tanggal) = $month AND YEAR(a.tanggal) = $year
+                WHERE a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
                 GROUP BY a.username
             ) agg ON u.username = agg.username
             LEFT JOIN hr_absensi a 
                 ON u.username = a.username
-                AND MONTH(a.tanggal) = $month 
-                AND YEAR(a.tanggal) = $year
-            WHERE u.username like 'tj%'
+                AND a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
+            WHERE u.username LIKE 'tj%'
             GROUP BY u.username, u.name, u.department
             ORDER BY u.username
         ";
