@@ -202,7 +202,7 @@ try {
         $offset = ($page - 1) * $limit;
 
         // Daftar kolom yang bisa di-sort (untuk keamanan)
-        $allowedSortColumns = ['ta_id', 'date', 'from_origin', 'company', 'ras_status', 'description'];
+        $allowedSortColumns = ['ta_id', 'date', 'from_origin', 'company', 'ras_status','created_by', 'description'];
         $sortColumn = 'date'; // default sort column
         $sortOrder = 'DESC'; // default order
 
@@ -255,6 +255,13 @@ try {
         if (!empty($_GET['ras_status'])) {
             $where[] = "ras_status = ?";
             $params[] = $_GET['ras_status'];
+            $types .= 's';
+        }
+
+        // Filter: created_by  ✅ TAMBAHKAN INI
+        if (!empty($_GET['created_by'])) {
+            $where[] = "created_by LIKE ?";
+            $params[] = '%' . $_GET['created_by'] . '%';
             $types .= 's';
         }
 
