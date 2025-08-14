@@ -7,73 +7,59 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        try {
-            // Authorization
-            authorize(8, ["admin_absensi"], [], null);
-            $user = verifyToken();
-            $logged_in_company_id = $user['id_company'] ?? -1;
+        $username = $_GET['username'] ?? null;
+        authorize(8, ['admin_absensi'], [], $username);
 
-            if ($logged_in_company_id == -1) {
-                throw new Exception("Missing company ID");
-            }
+        // Baca dan proses parameter month (format: YYYY-MM)
+        $monthInput = $_GET['month'] ?? null;
+        if ($monthInput && preg_match('/^(\d{4})-(\d{2})$/', $monthInput, $matches)) {
+            $year = (int)$matches[1];
+            $month = (int)$matches[2];
+        } else {
+            $year = (int)date('Y');
+            $month = (int)date('n');
+        }
 
-            // Get month parameter
-            $monthInput = $_GET['month'] ?? null;
-            if ($monthInput && preg_match('/^(\d{4})-(\d{2})$/', $monthInput, $matches)) {
-                $year = (int)$matches[1];
-                $month = (int)$matches[2];
-            } else {
-                $year = (int)date('Y');
-                $month = (int)date('n');
-            }
+        // Validasi
+        if ($month < 1 || $month > 12) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Bulan tidak valid"]);
+            exit;
+        }
+        if ($year < 2000 || $year > 2100) {
+            http_response_code(400);
+            echo json_encode(["status" => 400, "error" => "Tahun tidak valid"]);
+            exit;
+        }
 
-            // Validate
-            if ($month < 1 || $month > 12) {
-                throw new Exception("Invalid month");
-            }
-            if ($year < 2000 || $year > 2100) {
-                throw new Exception("Invalid year");
-            }
+        // Hitung rentang tanggal
+        $start_date = "$year-$month-01";
+        $end_date = date("Y-m-t", strtotime($start_date)); // akhir bulan
 
-            // Get requested company filter (only applicable for superadmin)
-            $requested_company_id = isset($_GET['company_id']) ? (int)$_GET['company_id'] : null;
-            
-            // Apply company filter
-            $company_filter = "";
-            if ($logged_in_company_id !== 0) {
-                // Regular admin can only see their own company
-                $company_filter = "AND u.id_company = $logged_in_company_id";
-            } else if ($requested_company_id !== null && $requested_company_id > 0) {
-                // Superadmin can filter by specific company if requested
-                $company_filter = "AND u.id_company = $requested_company_id";
-            }
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
-            // Calculate date range
-            $start_date = "$year-$month-01";
-            $end_date = date("Y-m-t", strtotime($start_date));
+        $dayColumns = [];
+        $presentSumParts = [];
 
-            // Days in month
-            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $col = "MAX(CASE WHEN DAY(a.tanggal) = $day THEN 1 ELSE NULL END)";
+            $dayColumns[] = "$col AS `$day`";
+            $presentSumParts[] = $col;
+        }
 
-            // Build dynamic day columns
-            $dayColumns = [];
-            for ($day = 1; $day <= $daysInMonth; $day++) {
-                $col = "MAX(CASE WHEN DAY(a.tanggal) = $day THEN 1 ELSE NULL END)";
-                $dayColumns[] = "$col AS `$day`";
-            }
-            $dayColumnsSql = implode(",\n", $dayColumns);
+        $dayColumnsSql = implode(",\n", $dayColumns);
+        $presentSumSql = implode(" + ", $presentSumParts);
 
-            // Main query
-            $sql = "
-                SELECT 
-                    u.username AS NIK,
-                    u.name,
-                    u.department,
-                    u.lokasi,
-                    u.jabatan,
-                    NULL AS Kepeg,
-                    $dayColumnsSql,
-                    COUNT(DISTINCT a.tanggal) AS `Tot Hadir`,
+        $sql = "
+            SELECT 
+                u.username AS NIK,
+                u.name,
+                u.department,
+                u.lokasi,
+                u.jabatan,
+                NULL AS Kepeg,
+                $dayColumnsSql,
+                agg.total_hadir AS `Tot Hadir`,
                 NULL AS PD,
                 NULL AS `Adj PD`,
                 NULL AS OFF,
@@ -102,46 +88,48 @@ switch ($method) {
                 agg.total_ovt AS `Tot Overhour`,
                 agg.avg_hour_in AS 'AVG HOUR IN',
                 agg.total_hour_worked AS 'TOT HOUR WORKED'
-           FROM user_profiles u
-                LEFT JOIN hr_absensi a ON u.username = a.username
-                    AND a.tanggal BETWEEN '$start_date' AND '$end_date'
-                WHERE 1=1
-                    $company_filter
-                GROUP BY u.username, u.name, u.department, u.lokasi, u.jabatan
-                ORDER BY u.username
-            ";
+            FROM user_profiles u
+            LEFT JOIN (
+                SELECT 
+                    a.username,
+                    COUNT(DISTINCT a.tanggal) AS total_hadir,
+                    SUM(CASE WHEN TIME(a.hour_in) > '08:00:00' THEN 1 ELSE 0 END) AS total_telat,
+                    SUM(CASE WHEN a.ovt > 0 THEN 1 ELSE 0 END) AS count_ovt,
+                    SUM(a.ovt) AS total_ovt_hour,
+                    SUM(a.total) AS total_ovt,
+                    TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_in)))), '%H:%i:%s') AS avg_hour_in,
+                    TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
+                    ROUND(SUM(a.hour_worked), 2) as total_hour_worked
+                FROM hr_absensi a
+                WHERE a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
+                GROUP BY a.username
+            ) agg ON u.username = agg.username
+            LEFT JOIN hr_absensi a 
+                ON u.username = a.username
+                AND a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
+            WHERE u.username LIKE 'tj%'
+            GROUP BY u.username, u.name, u.department
+            ORDER BY u.username
+        ";
 
-            $result = $conn->query($sql);
-            if (!$result) {
-                throw new Exception("Query failed: " . $conn->error);
-            }
-
-            $data = [];
-            while ($row = $result->fetch_assoc()) {
-                $data[] = $row;
-            }
-
-            echo json_encode([
-                'status' => 200,
-                'data' => $data,
-                'meta' => [
-                    'company_id' => $logged_in_company_id,
-                    'date_range' => "$start_date to $end_date"
-                ]
-            ]);
-
-        } catch (Exception $e) {
+        $result = $conn->query($sql);
+        if (!$result) {
             http_response_code(500);
-            echo json_encode([
-                'status' => 500,
-                'error' => $e->getMessage()
-            ]);
+            echo json_encode(["status" => 500, "error" => $conn->error]);
+            break;
         }
+
+        $status = [];
+        while ($row = $result->fetch_assoc()) {
+            $status[] = $row;
+        }
+
+        echo json_encode($status);
         break;
 
     default:
         http_response_code(405);
-        echo json_encode(["status" => 405, "error" => "Method not allowed"]);
+        echo json_encode(["status" => 405, "error" => "Invalid request method"]);
         break;
 }
 
