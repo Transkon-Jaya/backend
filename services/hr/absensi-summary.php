@@ -20,9 +20,6 @@ switch ($method) {
             $month = (int)date('n');
         }
 
-        // Ambil parameter id_company (default 0 untuk semua perusahaan)
-        $id_company = isset($_GET['id_company']) ? (int)$_GET['id_company'] : 0;
-
         // Validasi
         if ($month < 1 || $month > 12) {
             http_response_code(400);
@@ -53,7 +50,6 @@ switch ($method) {
         $dayColumnsSql = implode(",\n", $dayColumns);
         $presentSumSql = implode(" + ", $presentSumParts);
 
-        // Persiapkan parameter untuk prepared statement
         $sql = "
             SELECT 
                 u.username AS NIK,
@@ -105,34 +101,21 @@ switch ($method) {
                     TIME_FORMAT(SEC_TO_TIME(AVG(TIME_TO_SEC(TIME(a.hour_out)))), '%H:%i:%s') AS avg_hour_out,
                     ROUND(SUM(a.hour_worked), 2) as total_hour_worked
                 FROM hr_absensi a
-                WHERE a.tanggal >= ? AND a.tanggal <= ?
+                WHERE a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
                 GROUP BY a.username
             ) agg ON u.username = agg.username
             LEFT JOIN hr_absensi a 
                 ON u.username = a.username
-                AND a.tanggal >= ? AND a.tanggal <= ?
-            WHERE u.username LIKE '%%'
-                AND (? = 0 OR u.id_company = ?)
+                AND a.tanggal >= '$start_date' AND a.tanggal <= '$end_date'
+            WHERE u.username LIKE 'tj%'
             GROUP BY u.username, u.name, u.department
             ORDER BY u.username
         ";
 
-        // Gunakan prepared statement untuk keamanan
-        $stmt = $conn->prepare($sql);
-        if (!$stmt) {
-            http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $conn->error]);
-            break;
-        }
-
-        // Bind parameter
-        $stmt->bind_param("ssssii", $start_date, $end_date, $start_date, $end_date, $id_company, $id_company);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
+        $result = $conn->query($sql);
         if (!$result) {
             http_response_code(500);
-            echo json_encode(["status" => 500, "error" => $stmt->error]);
+            echo json_encode(["status" => 500, "error" => $conn->error]);
             break;
         }
 
@@ -142,7 +125,6 @@ switch ($method) {
         }
 
         echo json_encode($status);
-        $stmt->close();
         break;
 
     default:
