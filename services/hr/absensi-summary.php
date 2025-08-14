@@ -111,7 +111,7 @@ switch ($method) {
             LEFT JOIN hr_absensi a 
                 ON u.username = a.username
                 AND a.tanggal >= ? AND a.tanggal <= ?
-            WHERE u.username LIKE 'tj%'
+            WHERE u.username LIKE '%%'
                 AND (? = 0 OR u.id_company = ?)
             GROUP BY u.username, u.name, u.department
             ORDER BY u.username
