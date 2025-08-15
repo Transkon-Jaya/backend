@@ -16,7 +16,7 @@ try {
         exit;
     }
 
-    $stmt = $conn->prepare("SELECT name, address, state FROM customer WHERE name LIKE ? LIMIT 10");
+    $stmt = $conn->prepare("SELECT * FROM customer WHERE name LIKE ? LIMIT 10");
     $likeSearch = "%$search%";
     $stmt->bind_param("s", $likeSearch);
     $stmt->execute();
