@@ -84,7 +84,7 @@ try {
         "status" => 200,
         "message" => "Gambar berhasil diupload",
         "data" => [
-            "image_url" => "https://www.transkon-rent.com/uploads/assets/" . $filename,
+            "image_url" => "https://one.transkon-rent.com/uploads/assets/" . $filename,
             "file_name" => $filename,
             "timestamp" => time()
         ]
