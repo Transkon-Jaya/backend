@@ -96,3 +96,4 @@ function handleDelete() {
 
     echo json_encode(['success' => true, 'deleted_rows' => $stmt->affected_rows]);
 }
+//test
